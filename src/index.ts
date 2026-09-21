@@ -5,3 +5,6 @@ export type { DocumentVersion, Position, Range, TextEdit, UriString } from "./ty
 export * from "./utils/ranges.js";
 export * from "./utils/strings.js";
 export * from "./utils/paths.js";
+export { Document } from "./documents/document.js";
+export { DocumentManager } from "./documents/document-manager.js";
+export * from "./documents/offsets.js";

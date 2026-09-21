@@ -31,8 +31,8 @@ VS Code / Neovim / Zed / Helix / VSCodium
 - Error recovery: broken templates produce partial results, never crash the server.
 - No full-workspace scans per keystroke; prefer caches, indexes, incremental updates, debouncing.
 
-## Current state (Phase 2/20)
+## Current state (Phase 3/20)
 
-Core types (`src/types/`) and pure utils (`src/utils/ranges|strings|paths`) done.
-No LSP imports in core. Offsets are UTF-16 code units; paths are POSIX-first.
-Phase 3 introduces the document engine.
+Document engine (`src/documents/document|document-manager|offsets`) done.
+Immutable `Document`, URI-keyed `DocumentManager`, UTF-16 offsets, full-text sync.
+Phase 4 introduces the Jinja lexer.
