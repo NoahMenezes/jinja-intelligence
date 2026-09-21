@@ -1,7 +1,7 @@
 # Roadmap (20 phases)
 
-- [x] Phase 1 — Bootstrap & Tooling (in progress)
-- [ ] Phase 2 — Core Types & Utils
+- [x] Phase 1 — Bootstrap & Tooling
+- [x] Phase 2 — Core Types & Utils (done)
 - [ ] Phase 3 — Document Engine
 - [ ] Phase 4 — Jinja Lexer
 - [ ] Phase 5 — AST + Expression Parser

@@ -31,7 +31,8 @@ VS Code / Neovim / Zed / Helix / VSCodium
 - Error recovery: broken templates produce partial results, never crash the server.
 - No full-workspace scans per keystroke; prefer caches, indexes, incremental updates, debouncing.
 
-## Current state (Phase 1/20)
+## Current state (Phase 2/20)
 
-Bootstrap & tooling only. `src/` and feature layers are intentionally empty.
-Phase 2 introduces core types/utils, Phase 3 the document engine.
+Core types (`src/types/`) and pure utils (`src/utils/ranges|strings|paths`) done.
+No LSP imports in core. Offsets are UTF-16 code units; paths are POSIX-first.
+Phase 3 introduces the document engine.
