@@ -8,7 +8,7 @@ import { TextDocumentSyncKind, type ServerCapabilities } from "vscode-languagese
 export function createServerCapabilities(): ServerCapabilities {
   return {
     textDocumentSync: TextDocumentSyncKind.Full,
-    completionProvider: { triggerCharacters: ["|"], resolveProvider: false },
+    completionProvider: { triggerCharacters: ["|", "."], resolveProvider: false },
     hoverProvider: false,
     definitionProvider: false,
     referencesProvider: false,

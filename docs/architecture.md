@@ -31,9 +31,11 @@ VS Code / Neovim / Zed / Helix / VSCodium
 - Error recovery: broken templates produce partial results, never crash the server.
 - No full-workspace scans per keystroke; prefer caches, indexes, incremental updates, debouncing.
 
-## Current state (Phase 10/20)
+## Current state (Phase 11/20)
 
-Core completion (`src/features/completion/`) done: lexer-driven context
-detection (statement/filter/test/none), full category lists with client-side
-filtering, `|` trigger, guarded `onCompletion`. No variable items yet.
-Phase 11 introduces context-aware completion.
+Context-aware completion (`src/features/completion/` + analysis) done:
+scope-chain variables, builtins, file-context externals (ranked 0/1/2),
+`loop.*` properties, `.` trigger. Template-file names need the project
+index (Phase 16); prose needs hover docs (Phase 12). Per-keystroke
+parse+analyze is fine at template scale; caching is Phase 19.
+Phase 12 introduces hover and documentation.

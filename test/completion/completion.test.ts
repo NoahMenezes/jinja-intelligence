@@ -69,11 +69,14 @@ describe("completion context", () => {
   it("returns nothing outside known contexts", () => {
     expect(complete("hello ", 6)).toEqual([]);
     expect(complete("{# note #}", 5)).toEqual([]);
-    expect(complete("{{ x }}", 4)).toEqual([]);
-    expect(complete("{% set ", 7)).toEqual([]);
-    expect(complete("{{ user }}", 8)).toEqual([]);
     expect(complete("", 0)).toEqual([]);
-    expect(complete("{{ not }}", 7)).toEqual([]);
+  });
+
+  it("treats end-of-word expression positions as variable context (Phase 11)", () => {
+    // These were "none" before scope-aware completion existed.
+    expect(detectContext("{{ x }}", 4)).toBe("variable");
+    expect(detectContext("{% set ", 7)).toBe("variable");
+    expect(detectContext("{{ not }}", 7)).toBe("variable");
   });
 
   it("never throws on hostile input", () => {

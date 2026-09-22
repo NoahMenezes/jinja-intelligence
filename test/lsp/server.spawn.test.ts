@@ -254,6 +254,7 @@ describe("server over stdio", () => {
       const caps = (init.result as { capabilities: { completionProvider: { triggerCharacters: string[] } } })
         .capabilities.completionProvider;
       expect(caps.triggerCharacters).toContain("|");
+      expect(caps.triggerCharacters).toContain(".");
       client.notify("initialized", {});
       const uri = "file:///tmp/phase10.j2";
       const text = "{% %}\n{{ user | }}\nplain";
@@ -283,6 +284,43 @@ describe("server over stdio", () => {
         position: { line: 2, character: 5 },
       });
       expect(completionLabels(plain.result)).toEqual([]);
+
+      const shutdown = await client.request("shutdown", undefined);
+      expect(shutdown.error).toBeUndefined();
+      client.notify("exit", undefined);
+      await expect(client.waitForExit()).resolves.toBe(0);
+    },
+    TIMEOUT_MS + 5000,
+  );
+
+  it(
+    "answers variable and property completion over stdio",
+    async () => {
+      const client = launch();
+      await client.request("initialize", initParams());
+      client.notify("initialized", {});
+      const uri = "file:///tmp/phase11.j2";
+      const text = "{% for user in users %}{{ }}\n{{ loop. }}";
+      client.notify("textDocument/didOpen", {
+        textDocument: { uri, languageId: "jinja", version: 1, text },
+      });
+      await client.waitForNotification("textDocument/publishDiagnostics");
+
+      const variables = await client.request("textDocument/completion", {
+        textDocument: { uri },
+        // Inside `{{ }}` on line 0.
+        position: { line: 0, character: 25 },
+      });
+      const names = completionLabels(variables.result);
+      expect(names).toContain("user");
+      expect(names).toContain("users");
+
+      const props = await client.request("textDocument/completion", {
+        textDocument: { uri },
+        // After `loop.` on line 1.
+        position: { line: 1, character: 8 },
+      });
+      expect(completionLabels(props.result)).toContain("index");
 
       const shutdown = await client.request("shutdown", undefined);
       expect(shutdown.error).toBeUndefined();

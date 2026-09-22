@@ -2,7 +2,7 @@
 
 > Truthful status. Only what exists is marked done.
 
-## Done (Phase 10/20)
+## Done (Phase 11/20)
 
 - Project tooling: Bun + strict TypeScript + Vitest + build scripts.
 - Core types and utils: Position/Range/TextEdit/URIs, range/string/path helpers.
@@ -14,6 +14,7 @@
 - Syntax diagnostics: parser errors publish as versioned Error diagnostics on open/change and clear on fix/close (`source: jinja-intelligence`).
 - Scope and symbol analysis (internal plumbing; nothing editor-visible yet): loop/set/macro/import/block/with bindings, shadowing, `resolveAt`, external-name collection.
 - Core completion: statement openers after `{%`, filters after `|`, tests after `is` (no variables/properties yet — Phase 11).
+- Context-aware completion: scope variables, builtins, file-context names, `loop.*` properties (template-file names need project indexing — Phase 16).
 
 ## Diagnostic codes
 
@@ -29,7 +30,6 @@ Unknown tags (e.g. `{% fro x %}`) intentionally produce no diagnostics.
 
 ## Planned (not implemented)
 
-- Context-aware completion (variables, properties)
 - Hover and documentation
 - Go-to-definition / template resolution
 - References / rename

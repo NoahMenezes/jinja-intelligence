@@ -1,4 +1,5 @@
 import { CompletionItemKind, type CompletionItem } from "vscode-languageserver/node.js";
+import { BUILTINS } from "../../jinja/syntax/builtins.js";
 import { FILTERS } from "../../jinja/syntax/filters.js";
 import { TESTS } from "../../jinja/syntax/tests.js";
 
@@ -56,4 +57,24 @@ export function buildTestItems(): CompletionItem[] {
       detail: "test",
       sortText: label,
     }));
+}
+
+const KEYWORD_BUILTINS: ReadonlySet<string> = new Set(["true", "false", "none"]);
+const VARIABLE_BUILTINS: ReadonlySet<string> = new Set(["loop", "super", "self"]);
+
+/** Jinja globals, suggested in variable positions. Skips names shadowed in scope. */
+export function buildBuiltinItems(exclude: ReadonlySet<string>): CompletionItem[] {
+  const items: CompletionItem[] = [];
+  for (const label of [...BUILTINS].sort()) {
+    if (exclude.has(label)) {
+      continue;
+    }
+    const kind = KEYWORD_BUILTINS.has(label)
+      ? CompletionItemKind.Keyword
+      : VARIABLE_BUILTINS.has(label)
+        ? CompletionItemKind.Variable
+        : CompletionItemKind.Function;
+    items.push({ label, kind, detail: "builtin", sortText: `1${label}` });
+  }
+  return items;
 }

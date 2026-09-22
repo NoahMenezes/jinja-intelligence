@@ -1,30 +1,79 @@
 import type { CompletionItem } from "vscode-languageserver/node.js";
+import { parseTemplate } from "../../jinja/parser/parser.js";
+import { analyzeTemplate } from "../../jinja/analysis/analyzer.js";
 import { lex } from "../../jinja/lexer/lexer.js";
 import type { Token } from "../../jinja/lexer/token-types.js";
 import { buildFilterItems, buildStatementItems, buildTestItems } from "./providers.js";
+import { buildPropertyItems, buildVariableItems } from "./variables.js";
 
-export type CompletionContext = "statement" | "filter" | "test" | "none";
+export type CompletionContext = "statement" | "filter" | "test" | "variable" | "property" | "none";
 
 /**
- * Context-aware core completion. Lexer-driven (multiline-safe, tolerant of
- * unclosed tags while typing). Returns full category lists; clients filter
- * on typing. Variables, properties, and prose arrive in later phases.
+ * Context-aware completion. Lexer-driven detection (multiline-safe, tolerant
+ * of unclosed tags while typing); scope-driven items for variable and
+ * property positions. Returns full category lists; clients filter on typing.
+ * Template-file names and prose arrive in later phases.
  */
 export function complete(text: string, offset: number): CompletionItem[] {
   try {
-    switch (detectContext(text, offset)) {
+    const at = Math.min(Math.max(0, offset), text.length);
+    switch (detectContext(text, at)) {
       case "statement":
         return buildStatementItems();
       case "filter":
         return buildFilterItems();
       case "test":
         return buildTestItems();
+      case "variable":
+        return buildVariableItems(analyze(text), at);
+      case "property": {
+        const base = propertyBase(text, at);
+        if (base === null) {
+          return [];
+        }
+        return buildPropertyItems(analyze(text), base.name, base.offset);
+      }
       case "none":
         return [];
     }
   } catch {
     return [];
   }
+}
+
+function analyze(text: string) {
+  return analyzeTemplate(parseTemplate(text).root);
+}
+
+/** Base word of a `base.attr` position: nearest identifier before the dot. */
+function propertyBase(text: string, offset: number): { name: string; offset: number } | null {
+  const at = Math.min(Math.max(0, offset), text.length);
+  const tokens = lex(text).tokens;
+  let dot: Token | null = null;
+  for (const token of tokens) {
+    if (token.start > at) {
+      break;
+    }
+    if (token.kind === "Dot" && token.end <= at) {
+      dot = token;
+    }
+  }
+  if (dot === null) {
+    return null;
+  }
+  let base: Token | null = null;
+  for (const token of tokens) {
+    if (token.start >= dot.start) {
+      break;
+    }
+    if (token.end <= dot.start && token.kind !== "EOF") {
+      base = token;
+    }
+  }
+  if (base === null || base.kind !== "Identifier") {
+    return null;
+  }
+  return { name: base.value, offset: base.start };
 }
 
 export function detectContext(text: string, offset: number): CompletionContext {
@@ -54,6 +103,16 @@ export function detectContext(text: string, offset: number): CompletionContext {
     return "none";
   }
   const inBlock = open.kind === "BlockOpen";
+
+  // Inside a string literal: template names need the project index (later phase).
+  for (const token of tokens) {
+    if (token.start > at) {
+      break;
+    }
+    if (token.kind === "String" && token.start < at && at < token.end) {
+      return "none";
+    }
+  }
 
   // Inner tokens ending at or before the cursor. A word ending exactly at
   // the cursor is complete input (`{% set| %}`, `{{ x | up| }}`); a word
@@ -96,7 +155,13 @@ export function detectContext(text: string, offset: number): CompletionContext {
   ) {
     return "test";
   }
-  return "none";
+  if (last !== undefined && (last.kind === "Dot" || (isWord(last) && prev !== undefined && prev.kind === "Dot"))) {
+    return "property";
+  }
+  if (last !== undefined && (last.kind === "String" || last.kind === "Number")) {
+    return "none";
+  }
+  return "variable";
 }
 
 function isWord(token: Token | undefined): boolean {

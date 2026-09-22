@@ -2,7 +2,7 @@
 
 A modern, Python-aware, project-aware Language Server for Jinja templates.
 
-> **Status (Phase 10/20):** Live diagnostics + core completion (statements/filters/tests). No variables/hover yet.
+> **Status (Phase 11/20):** Live diagnostics + scope-aware completion (variables, `loop.*`). No hover/navigation yet.
 
 The LSP server is the core product. It is editor-agnostic and communicates over
 standard LSP (stdio), so VS Code, Neovim, Zed, Helix, VSCodium and other

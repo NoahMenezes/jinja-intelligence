@@ -13,7 +13,7 @@ describe("capabilities", () => {
     expect(caps.renameProvider).toBe(false);
     expect(caps.documentSymbolProvider).toBe(false);
     expect(caps.workspaceSymbolProvider).toBe(false);
-    expect(caps.completionProvider).toEqual({ triggerCharacters: ["|"], resolveProvider: false });
+    expect(caps.completionProvider).toEqual({ triggerCharacters: ["|", "."], resolveProvider: false });
     expect(caps.signatureHelpProvider).toBeUndefined();
     expect(caps.semanticTokensProvider).toBeUndefined();
   });
