@@ -1,0 +1,11 @@
+<h1>{{ title }}</h1>
+{% if user %}
+  Hello, {{ user.name | upper }}!
+{% for item in items %}
+  {{ item.title | default("untitled") }}
+{% endfor %}
+{% else %}
+  No user.
+{% endif %}
+{# footer comment #}
+{% macro button(label, type="primary") %}{{ label }}{% endmacro %}

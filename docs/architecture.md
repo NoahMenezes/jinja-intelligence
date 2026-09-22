@@ -31,8 +31,8 @@ VS Code / Neovim / Zed / Helix / VSCodium
 - Error recovery: broken templates produce partial results, never crash the server.
 - No full-workspace scans per keystroke; prefer caches, indexes, incremental updates, debouncing.
 
-## Current state (Phase 3/20)
+## Current state (Phase 4/20)
 
-Document engine (`src/documents/document|document-manager|offsets`) done.
-Immutable `Document`, URI-keyed `DocumentManager`, UTF-16 offsets, full-text sync.
-Phase 4 introduces the Jinja lexer.
+Lexer (`src/jinja/lexer/`) and syntax data (`src/jinja/syntax/`) done.
+Total `lex()` function, ranged tokens, graceful unterminated-tag errors.
+Phase 5 introduces the AST + expression parser.
