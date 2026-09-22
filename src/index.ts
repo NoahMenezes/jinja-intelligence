@@ -1,5 +1,11 @@
+import { createRequire } from "node:module";
+
+const require = createRequire(import.meta.url);
+const packageJson = require("../package.json") as { readonly version: string };
+
 export const SERVER_NAME = "jinja-intelligence";
-export const SERVER_VERSION = "0.1.0";
+/** Single source of truth: always matches package.json. */
+export const SERVER_VERSION: string = packageJson.version;
 
 export type { DocumentVersion, Position, Range, TextEdit, UriString } from "./types/index.js";
 export * from "./utils/ranges.js";
@@ -20,3 +26,8 @@ export * from "./jinja/parser/parser-errors.js";
 export * from "./jinja/parser/expressions.js";
 export * from "./jinja/parser/statements.js";
 export * from "./jinja/parser/parser.js";
+export * from "./config/settings.js";
+export * from "./utils/logging.js";
+export * from "./lsp/capabilities.js";
+export * from "./lsp/lifecycle.js";
+export * from "./lsp/document-sync.js";

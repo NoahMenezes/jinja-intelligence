@@ -1,0 +1,163 @@
+import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
+import { fileURLToPath } from "node:url";
+import { afterEach, describe, expect, it } from "vitest";
+
+const SERVER = fileURLToPath(new URL("../../src/server.ts", import.meta.url));
+const TIMEOUT_MS = 15000;
+
+interface RpcMessage {
+  readonly id?: number | string;
+  readonly method?: string;
+  readonly result?: unknown;
+  readonly error?: unknown;
+  readonly params?: unknown;
+}
+
+/** Minimal LSP client over a child process stdio. Routes responses by id. */
+class TestClient {
+  private buffer = Buffer.alloc(0);
+  private nextId = 1;
+  private readonly pending = new Map<number, (msg: RpcMessage) => void>();
+  readonly notifications: RpcMessage[] = [];
+
+  constructor(private readonly child: ChildProcessWithoutNullStreams) {
+    child.stdout.on("data", (chunk: Buffer) => this.feed(chunk));
+  }
+
+  private feed(chunk: Buffer): void {
+    this.buffer = Buffer.concat([this.buffer, chunk]);
+    for (;;) {
+      const text = this.buffer.toString("utf8");
+      const headerEnd = text.indexOf("\r\n\r\n");
+      if (headerEnd === -1) {
+        return;
+      }
+      const header = text.slice(0, headerEnd);
+      const match = /Content-Length:\s*(\d+)/i.exec(header);
+      if (match === null || match[1] === undefined) {
+        return;
+      }
+      const length = Number(match[1]);
+      const start = headerEnd + 4;
+      if (this.buffer.length < start + length) {
+        return;
+      }
+      const body = this.buffer.subarray(start, start + length).toString("utf8");
+      this.buffer = this.buffer.subarray(start + length);
+      const message = JSON.parse(body) as RpcMessage;
+      if (typeof message.id === "number" && this.pending.has(message.id)) {
+        const resolve = this.pending.get(message.id);
+        this.pending.delete(message.id);
+        resolve?.(message);
+      } else {
+        this.notifications.push(message);
+      }
+    }
+  }
+
+  send(message: object): void {
+    const body = JSON.stringify(message);
+    this.child.stdin.write(`Content-Length: ${Buffer.byteLength(body)}\r\n\r\n${body}`);
+  }
+
+  request(method: string, params?: unknown): Promise<RpcMessage> {
+    const id = this.nextId++;
+    return new Promise<RpcMessage>((resolve, reject) => {
+      const timer = setTimeout(() => {
+        this.pending.delete(id);
+        reject(new Error(`Timed out waiting for response to ${method}.`));
+      }, TIMEOUT_MS);
+      this.pending.set(id, (msg) => {
+        clearTimeout(timer);
+        resolve(msg);
+      });
+      this.send({ jsonrpc: "2.0", id, method, params });
+    });
+  }
+
+  notify(method: string, params?: unknown): void {
+    this.send({ jsonrpc: "2.0", method, params });
+  }
+
+  waitForExit(): Promise<number | null> {
+    return new Promise((resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error("Timed out waiting for server exit.")), TIMEOUT_MS);
+      this.child.on("exit", (code) => {
+        clearTimeout(timer);
+        resolve(code);
+      });
+    });
+  }
+}
+
+const children: ChildProcessWithoutNullStreams[] = [];
+
+afterEach(() => {
+  for (const child of children.splice(0)) {
+    try {
+      child.kill("SIGKILL");
+    } catch {
+      // Already exited.
+    }
+  }
+});
+
+function launch(): TestClient {
+  const child = spawn(process.execPath, [SERVER, "--stdio"], { stdio: ["pipe", "pipe", "pipe"] });
+  children.push(child);
+  return new TestClient(child);
+}
+
+function initParams(): Record<string, unknown> {
+  return {
+    processId: null,
+    clientInfo: { name: "phase7-test" },
+    rootUri: null,
+    capabilities: {},
+  };
+}
+
+describe("server over stdio", () => {
+  it(
+    "handshakes, syncs documents, survives bad input, and exits 0 after shutdown",
+    async () => {
+      const client = launch();
+      const init = await client.request("initialize", initParams());
+      const result = init.result as { capabilities: { textDocumentSync: number }; serverInfo: { name: string } };
+      expect(result.capabilities.textDocumentSync).toBe(1);
+      expect(result.serverInfo.name).toBe("jinja-intelligence");
+
+      client.notify("initialized", {});
+      const uri = "file:///tmp/phase7.html";
+      client.notify("textDocument/didOpen", {
+        textDocument: { uri, languageId: "jinja", version: 1, text: "Hello {{ name }}" },
+      });
+      client.notify("textDocument/didChange", {
+        textDocument: { uri, version: 2 },
+        contentChanges: [{ text: "Hello {{ user }}" }],
+      });
+      client.notify("textDocument/didClose", { textDocument: { uri } });
+
+      // Unknown method: server must answer with a JSON-RPC error and stay alive.
+      const unknown = await client.request("foo/bar", {});
+      expect(unknown.error).toBeDefined();
+
+      const shutdown = await client.request("shutdown", undefined);
+      expect(shutdown.error).toBeUndefined();
+      client.notify("exit", undefined);
+      await expect(client.waitForExit()).resolves.toBe(0);
+    },
+    TIMEOUT_MS + 5000,
+  );
+
+  it(
+    "exits non-zero when killed via exit without shutdown",
+    async () => {
+      const client = launch();
+      await client.request("initialize", initParams());
+      client.notify("exit", undefined);
+      await expect(client.waitForExit()).resolves.toBe(1);
+    },
+    TIMEOUT_MS + 5000,
+  );
+});

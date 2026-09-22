@@ -1,19 +1,22 @@
 {
   "name": "jinja-intelligence",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Python-aware, project-aware Language Server for Jinja templates",
   "type": "module",
   "license": "MIT",
   "engines": {
     "node": ">=18"
   },
+  "bin": {
+    "jinja-intelligence": "dist/server.js"
+  },
   "scripts": {
-    "dev": "bun src/index.ts",
+    "dev": "bun src/server.ts --stdio",
     "typecheck": "tsc --noEmit",
     "build": "tsc -p tsconfig.build.json",
     "test": "vitest run",
     "test:watch": "vitest",
-    "start": "node dist/index.js"
+    "start": "node dist/server.js --stdio"
   },
   "dependencies": {
     "vscode-languageserver": "^9.0.1",
