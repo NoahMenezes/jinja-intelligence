@@ -31,9 +31,10 @@ VS Code / Neovim / Zed / Helix / VSCodium
 - Error recovery: broken templates produce partial results, never crash the server.
 - No full-workspace scans per keystroke; prefer caches, indexes, incremental updates, debouncing.
 
-## Current state (Phase 6/20)
+## Current state (Phase 7/20)
 
-Statement parser (`src/jinja/parser/statements.ts`) done: nested If/For/Set/
-Block/Extends/Include/Import/From/Macro/CallBlock/FilterBlock/With/RawBlock/Do
-nodes with recovery (missing/mismatched ends, stray tags, unknown tags as raw).
-Phase 7 introduces the LSP shell.
+LSP shell (`src/server.ts`, `src/lsp/`) done: stdio transport, initialize/
+initialized/shutdown/exit, Full document sync bridged into DocumentManager
+(the source of truth for all future intelligence), settings plumbing stored
+for later phases, crash guards + correct exit codes. No intelligence yet.
+Phase 8 introduces syntax diagnostics publishing.

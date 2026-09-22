@@ -1,11 +1,19 @@
 # Configuration
 
-> Phase 1: no user-facing configuration yet.
+> Phase 7: settings are accepted (initialization options + workspace
+> configuration) and stored, but no feature reads them yet.
 
-## Defaults (planned)
+## Defaults
 
-Future `ServerSettings` will be documented here once `src/config/settings.ts`
-exists (Phase 7). No config files are read in Phase 1.
+```jsonc
+{
+  // "jinjaIntelligence": {
+  //   "maxLogLines": 500,
+  //   "templateExtensions": [".jinja", ".jinja2", ".j2"]
+  // }
+}
+```
 
-This file intentionally stays minimal until configuration actually ships.
-Do not treat anything here as implemented.
+Settings key: `jinjaIntelligence`. Unknown keys are ignored; invalid values
+fall back to defaults. No config files are read; `templateExtensions` is
+reserved for Phase 16 project configuration.

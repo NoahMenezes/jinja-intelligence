@@ -19,9 +19,13 @@ class TestClient {
   private nextId = 1;
   private readonly pending = new Map<number, (msg: RpcMessage) => void>();
   readonly notifications: RpcMessage[] = [];
+  stderr = "";
 
   constructor(private readonly child: ChildProcessWithoutNullStreams) {
     child.stdout.on("data", (chunk: Buffer) => this.feed(chunk));
+    child.stderr.on("data", (chunk: Buffer) => {
+      this.stderr += chunk.toString("utf8");
+    });
   }
 
   private feed(chunk: Buffer): void {
@@ -65,7 +69,8 @@ class TestClient {
     return new Promise<RpcMessage>((resolve, reject) => {
       const timer = setTimeout(() => {
         this.pending.delete(id);
-        reject(new Error(`Timed out waiting for response to ${method}.`));
+        const tail = this.stderr.slice(-500);
+        reject(new Error(`Timed out waiting for response to ${method}. Server stderr: ${tail}`));
       }, TIMEOUT_MS);
       this.pending.set(id, (msg) => {
         clearTimeout(timer);
@@ -103,7 +108,9 @@ afterEach(() => {
 });
 
 function launch(): TestClient {
-  const child = spawn(process.execPath, [SERVER, "--stdio"], { stdio: ["pipe", "pipe", "pipe"] });
+  // Bun is the project's runtime (see docs/development.md prerequisites);
+  // the server entry is TypeScript and must be launched with it.
+  const child = spawn("bun", [SERVER, "--stdio"], { stdio: ["pipe", "pipe", "pipe"] });
   children.push(child);
   return new TestClient(child);
 }
