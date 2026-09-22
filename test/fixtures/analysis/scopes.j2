@@ -1,0 +1,18 @@
+{% set site = config.site %}
+{% for user in users %}
+  {{ user.name }} ({{ loop.index }})
+  {% set label = user.title | default("member") %}
+  {{ label }}
+{% endfor %}
+{% macro badge(text, level="info") %}
+  <span class="{{ level }}">{{ text }}</span>
+{% endmacro %}
+{% import "forms.html" as forms %}
+{% from "macros.html" import button as btn, card %}
+{% block content %}
+  {{ forms.input("q") }}
+  {{ btn("Go") }}
+  {{ site }}
+{% endblock %}
+{% with mode="full" %}{{ mode }}{% endwith %}
+{{ missing_var }}

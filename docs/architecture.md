@@ -31,10 +31,11 @@ VS Code / Neovim / Zed / Helix / VSCodium
 - Error recovery: broken templates produce partial results, never crash the server.
 - No full-workspace scans per keystroke; prefer caches, indexes, incremental updates, debouncing.
 
-## Current state (Phase 8/20)
+## Current state (Phase 9/20)
 
-Syntax diagnostics (`src/features/diagnostics/`) done: parser errors publish
-as versioned LSP diagnostics on open/change and clear on fix/close, with
-dedup + range clamping. Publishing is synchronous by design (deterministic,
-test-honest); debounced scheduling is a Phase 19 performance task.
-Phase 9 introduces scope and symbol analysis.
+Scope and symbol analysis (`src/jinja/analysis/`) done: lexical scopes
+(Template/For/Macro/With — if-blocks share scope, true to Jinja), symbol
+definitions, occurrence tracking, `resolveAt`, and external-name collection
+for future template-context work. Deliberate approximations: flow-insensitive
+`set` visibility, statement-level definition ranges, `self`/`super` unmodeled.
+Phase 10 introduces core completion.

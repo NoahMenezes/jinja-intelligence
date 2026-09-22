@@ -33,3 +33,6 @@ export * from "./lsp/lifecycle.js";
 export * from "./lsp/document-sync.js";
 export * from "./features/diagnostics/rules.js";
 export * from "./features/diagnostics/diagnostics.js";
+export * from "./jinja/analysis/symbols.js";
+export * from "./jinja/analysis/scope.js";
+export * from "./jinja/analysis/analyzer.js";

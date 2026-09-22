@@ -8,7 +8,7 @@
 - [x] Phase 6 — Statement Parser + Recovery
 - [x] Phase 7 — LSP Shell & Lifecycle
 - [x] Phase 8 — Syntax Diagnostics
-- [ ] Phase 9 — Scope & Symbol Analysis
+- [x] Phase 9 — Scope & Symbol Analysis
 - [ ] Phase 10 — Completion: Core
 - [ ] Phase 11 — Completion: Context-Aware
 - [ ] Phase 12 — Hover & Documentation

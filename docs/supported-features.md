@@ -2,7 +2,7 @@
 
 > Truthful status. Only what exists is marked done.
 
-## Done (Phase 8/20)
+## Done (Phase 9/20)
 
 - Project tooling: Bun + strict TypeScript + Vitest + build scripts.
 - Core types and utils: Position/Range/TextEdit/URIs, range/string/path helpers.
@@ -12,6 +12,7 @@
 - Jinja statements: nested if/for/set/block/extends/include/import/from/macro/call/filter/with/raw/do with missing/mismatched-end recovery.
 - LSP lifecycle: stdio server, initialize/initialized/shutdown/exit with correct exit codes, Full document sync (didOpen/didChange/didClose) into the document store.
 - Syntax diagnostics: parser errors publish as versioned Error diagnostics on open/change and clear on fix/close (`source: jinja-intelligence`).
+- Scope and symbol analysis (internal plumbing; nothing editor-visible yet): loop/set/macro/import/block/with bindings, shadowing, `resolveAt`, external-name collection.
 
 ## Diagnostic codes
 
@@ -27,7 +28,6 @@ Unknown tags (e.g. `{% fro x %}`) intentionally produce no diagnostics.
 
 ## Planned (not implemented)
 
-- Scope and symbol analysis
 - Completion (statements, filters, tests, context-aware)
 - Hover and documentation
 - Go-to-definition / template resolution
