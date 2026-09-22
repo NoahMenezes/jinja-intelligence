@@ -148,6 +148,15 @@ function initParams(): Record<string, unknown> {
   };
 }
 
+/** The server returns a bare item array; tolerate CompletionList shape too. */
+function completionLabels(result: unknown): string[] {
+  if (Array.isArray(result)) {
+    return (result as { label: string }[]).map((i) => i.label);
+  }
+  const items = (result as { items?: { label: string }[] } | null)?.items ?? [];
+  return items.map((i) => i.label);
+}
+
 describe("server over stdio", () => {
   it(
     "handshakes, syncs documents, survives bad input, and exits 0 after shutdown",
@@ -228,6 +237,52 @@ describe("server over stdio", () => {
         },
       );
       expect((cleared.params as { diagnostics: unknown[] }).diagnostics).toEqual([]);
+
+      const shutdown = await client.request("shutdown", undefined);
+      expect(shutdown.error).toBeUndefined();
+      client.notify("exit", undefined);
+      await expect(client.waitForExit()).resolves.toBe(0);
+    },
+    TIMEOUT_MS + 5000,
+  );
+
+  it(
+    "answers completion per context over stdio",
+    async () => {
+      const client = launch();
+      const init = await client.request("initialize", initParams());
+      const caps = (init.result as { capabilities: { completionProvider: { triggerCharacters: string[] } } })
+        .capabilities.completionProvider;
+      expect(caps.triggerCharacters).toContain("|");
+      client.notify("initialized", {});
+      const uri = "file:///tmp/phase10.j2";
+      const text = "{% %}\n{{ user | }}\nplain";
+      client.notify("textDocument/didOpen", {
+        textDocument: { uri, languageId: "jinja", version: 1, text },
+      });
+      // Skip the open-time diagnostics publishes.
+      await client.waitForNotification("textDocument/publishDiagnostics");
+
+      const statements = await client.request("textDocument/completion", {
+        textDocument: { uri },
+        position: { line: 0, character: 2 },
+      });
+      const statementLabels = completionLabels(statements.result);
+      expect(statementLabels).toContain("if");
+      expect(statementLabels).not.toContain("endif");
+
+      const filters = await client.request("textDocument/completion", {
+        textDocument: { uri },
+        position: { line: 1, character: 11 },
+      });
+      const filterLabels = completionLabels(filters.result);
+      expect(filterLabels).toContain("upper");
+
+      const plain = await client.request("textDocument/completion", {
+        textDocument: { uri },
+        position: { line: 2, character: 5 },
+      });
+      expect(completionLabels(plain.result)).toEqual([]);
 
       const shutdown = await client.request("shutdown", undefined);
       expect(shutdown.error).toBeUndefined();

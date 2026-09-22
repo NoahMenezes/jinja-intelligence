@@ -4,7 +4,7 @@ import { createServerCapabilities } from "../../src/lsp/capabilities.js";
 import { createInitializeResult, Lifecycle } from "../../src/lsp/lifecycle.js";
 
 describe("capabilities", () => {
-  it("advertises full sync and no intelligence providers", () => {
+  it("advertises full sync, core completion, and no other intelligence", () => {
     const caps = createServerCapabilities();
     expect(caps.textDocumentSync).toBe(TextDocumentSyncKind.Full);
     expect(caps.hoverProvider).toBe(false);
@@ -13,7 +13,7 @@ describe("capabilities", () => {
     expect(caps.renameProvider).toBe(false);
     expect(caps.documentSymbolProvider).toBe(false);
     expect(caps.workspaceSymbolProvider).toBe(false);
-    expect(caps.completionProvider).toBeUndefined();
+    expect(caps.completionProvider).toEqual({ triggerCharacters: ["|"], resolveProvider: false });
     expect(caps.signatureHelpProvider).toBeUndefined();
     expect(caps.semanticTokensProvider).toBeUndefined();
   });

@@ -31,11 +31,9 @@ VS Code / Neovim / Zed / Helix / VSCodium
 - Error recovery: broken templates produce partial results, never crash the server.
 - No full-workspace scans per keystroke; prefer caches, indexes, incremental updates, debouncing.
 
-## Current state (Phase 9/20)
+## Current state (Phase 10/20)
 
-Scope and symbol analysis (`src/jinja/analysis/`) done: lexical scopes
-(Template/For/Macro/With — if-blocks share scope, true to Jinja), symbol
-definitions, occurrence tracking, `resolveAt`, and external-name collection
-for future template-context work. Deliberate approximations: flow-insensitive
-`set` visibility, statement-level definition ranges, `self`/`super` unmodeled.
-Phase 10 introduces core completion.
+Core completion (`src/features/completion/`) done: lexer-driven context
+detection (statement/filter/test/none), full category lists with client-side
+filtering, `|` trigger, guarded `onCompletion`. No variable items yet.
+Phase 11 introduces context-aware completion.

@@ -36,3 +36,5 @@ export * from "./features/diagnostics/diagnostics.js";
 export * from "./jinja/analysis/symbols.js";
 export * from "./jinja/analysis/scope.js";
 export * from "./jinja/analysis/analyzer.js";
+export * from "./features/completion/providers.js";
+export * from "./features/completion/completion.js";

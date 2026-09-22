@@ -3,15 +3,18 @@ import {
   TextDocumentSyncKind,
   TextDocuments,
   createConnection,
+  type CompletionItem,
   type Connection,
   type InitializeParams,
   type InitializeResult,
 } from "vscode-languageserver/node.js";
 import { TextDocument } from "vscode-languageserver-textdocument";
 import { SERVER_NAME, SERVER_VERSION } from "../index.js";
+import type { UriString } from "../types/index.js";
 import { resolveSettings } from "../config/settings.js";
 import { createLogger, type Logger } from "../utils/logging.js";
 import { publishDiagnostics } from "../features/diagnostics/diagnostics.js";
+import { complete } from "../features/completion/completion.js";
 import { DocumentSync } from "./document-sync.js";
 import { createInitializeResult, Lifecycle } from "./lifecycle.js";
 
@@ -72,6 +75,19 @@ export function createServer(): Server {
   connection.onShutdown((): void => {
     lifecycle.markShutdown();
     logger.info("Shutdown requested.");
+  });
+
+  connection.onCompletion((params): CompletionItem[] => {
+    try {
+      const document = sync.manager.get(params.textDocument.uri as UriString);
+      if (document === null) {
+        return [];
+      }
+      return complete(document.text, document.offsetAt(params.position));
+    } catch (error) {
+      logger.error(`completion handler failed: ${String(error)}`);
+      return [];
+    }
   });
 
   documents.onDidOpen((event): void => {
