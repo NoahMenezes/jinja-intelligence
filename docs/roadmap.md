@@ -13,7 +13,7 @@
 - [x] Phase 11 — Completion: Context-Aware
 - [x] Phase 12 — Hover & Documentation
 - [x] Phase 13 — Template Resolution + Definition
-- [ ] Phase 14 — References + Rename
+- [x] Phase 14 — References + Rename
 - [ ] Phase 15 — Symbols + Signature Help + Semantic Tokens
 - [ ] Phase 16 — Project Intelligence & Indexing
 - [ ] Phase 17 — Python Awareness: Basic

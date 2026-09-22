@@ -437,6 +437,60 @@ describe("server over stdio", () => {
     },
     TIMEOUT_MS + 5000,
   );
+
+  it(
+    "answers references and rename over stdio",
+    async () => {
+      const client = launch();
+      const init = await client.request("initialize", initParams());
+      const caps = (init.result as { capabilities: { referencesProvider: boolean; renameProvider: boolean } })
+        .capabilities;
+      expect(caps.referencesProvider).toBe(true);
+      expect(caps.renameProvider).toBe(true);
+      client.notify("initialized", {});
+      const uri = "file:///tmp/phase14.j2";
+      const text = "{% for user in users %}{{ user.name }}{% endfor %}";
+      client.notify("textDocument/didOpen", {
+        textDocument: { uri, languageId: "jinja", version: 1, text },
+      });
+      await client.waitForNotification(
+        "textDocument/publishDiagnostics",
+        (m) => (m.params as { uri: string }).uri === uri,
+      );
+
+      const refs = await client.request("textDocument/references", {
+        textDocument: { uri },
+        // Over the `user` use.
+        position: { line: 0, character: 27 },
+        context: { includeDeclaration: false },
+      });
+      const locations = (refs.result as { uri: string }[] | null) ?? [];
+      expect(locations.length).toBe(1);
+      expect(locations[0]?.uri).toBe(uri);
+
+      const renamed = await client.request("textDocument/rename", {
+        textDocument: { uri },
+        position: { line: 0, character: 27 },
+        newName: "person",
+      });
+      const edits = (renamed.result as { changes: Record<string, { newText: string }[]> } | null)?.changes[uri] ?? [];
+      expect(edits.length).toBe(2);
+      expect(edits.every((e) => e.newText === "person")).toBe(true);
+
+      const refused = await client.request("textDocument/rename", {
+        textDocument: { uri },
+        position: { line: 0, character: 27 },
+        newName: "9x",
+      });
+      expect(refused.result).toBeNull();
+
+      const shutdown = await client.request("shutdown", undefined);
+      expect(shutdown.error).toBeUndefined();
+      client.notify("exit", undefined);
+      await expect(client.waitForExit()).resolves.toBe(0);
+    },
+    TIMEOUT_MS + 5000,
+  );
 });
 
 /** Extract Markdown hover text, tolerating a null result. */

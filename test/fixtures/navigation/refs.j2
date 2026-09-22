@@ -1,0 +1,10 @@
+{% set title = "Home" %}
+{% for user in users %}
+  {{ user.name }} ({{ loop.index }})
+  {{ title }}
+{% endfor %}
+{% macro badge(text) %}{{ text }}{% endmacro %}
+{{ badge("hi") }}
+{% import "forms.html" as forms %}
+{{ forms }}
+{{ missing }}

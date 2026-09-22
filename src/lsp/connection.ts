@@ -10,6 +10,7 @@ import {
   type InitializeParams,
   type InitializeResult,
   type Location,
+  type WorkspaceEdit,
 } from "vscode-languageserver/node.js";
 import { TextDocument } from "vscode-languageserver-textdocument";
 import { SERVER_NAME, SERVER_VERSION } from "../index.js";
@@ -20,6 +21,8 @@ import { publishDiagnostics } from "../features/diagnostics/diagnostics.js";
 import { complete } from "../features/completion/completion.js";
 import { definition } from "../features/definition/definition.js";
 import { hover } from "../features/hover/hover.js";
+import { references } from "../features/references/references.js";
+import { rename } from "../features/rename/rename.js";
 import { rootsFromInitialize } from "../project/workspace.js";
 import { DocumentSync } from "./document-sync.js";
 import { createInitializeResult, Lifecycle } from "./lifecycle.js";
@@ -126,6 +129,37 @@ export function createServer(): Server {
       return found;
     } catch (error) {
       logger.error(`definition handler failed: ${String(error)}`);
+      return null;
+    }
+  });
+
+  connection.onReferences((params): Location[] | null => {
+    try {
+      const document = sync.manager.get(params.textDocument.uri as UriString);
+      if (document === null) {
+        return null;
+      }
+      return references(
+        document.text,
+        params.textDocument.uri,
+        document.offsetAt(params.position),
+        params.context.includeDeclaration,
+      );
+    } catch (error) {
+      logger.error(`references handler failed: ${String(error)}`);
+      return null;
+    }
+  });
+
+  connection.onRenameRequest((params): WorkspaceEdit | null => {
+    try {
+      const document = sync.manager.get(params.textDocument.uri as UriString);
+      if (document === null) {
+        return null;
+      }
+      return rename(document.text, params.textDocument.uri, document.offsetAt(params.position), params.newName);
+    } catch (error) {
+      logger.error(`rename handler failed: ${String(error)}`);
       return null;
     }
   });

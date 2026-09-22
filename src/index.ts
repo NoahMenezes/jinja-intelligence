@@ -48,3 +48,6 @@ export * from "./jinja/ast/query.js";
 export * from "./templates/resolver.js";
 export * from "./project/workspace.js";
 export * from "./features/definition/definition.js";
+export * from "./features/references/bindings.js";
+export * from "./features/references/references.js";
+export * from "./features/rename/rename.js";

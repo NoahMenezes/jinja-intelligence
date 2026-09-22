@@ -2,7 +2,7 @@
 
 > Truthful status. Only what exists is marked done.
 
-## Done (Phase 13/20)
+## Done (Phase 14/20)
 
 - Project tooling: Bun + strict TypeScript + Vitest + build scripts.
 - Core types and utils: Position/Range/TextEdit/URIs, range/string/path helpers.
@@ -17,6 +17,7 @@
 - Context-aware completion: scope variables, builtins, file-context names, `loop.*` properties (template-file names need project indexing — Phase 16).
 - Hover documentation: filters, tests, keywords, symbols, macro signatures, builtins, `loop` attributes (typed properties and template references return nothing yet — Phases 13+).
 - Go-to-definition: template strings → files, local names → definitions, imported macros (incl. `alias.attr` segments and from-import bindings) → the macro in the target file. Block chains and Python references need later phases.
+- References and rename (single file): identity-based find-all-uses with `includeDeclaration`; validated rename with token-precise edits, refused on keywords/segments/strings/externals/invalid names. Cross-file rename needs project indexing (Phase 16).
 
 ## Diagnostic codes
 
@@ -32,7 +33,7 @@ Unknown tags (e.g. `{% fro x %}`) intentionally produce no diagnostics.
 
 ## Planned (not implemented)
 
-- References, rename, document/workspace symbols, signature help, semantic tokens (Phases 14–15)
+- Document/workspace symbols, signature help, semantic tokens (Phase 15)
 - Project indexing
 - Python awareness (`render_template` context)
 - Type intelligence (dataclasses, TypedDict, Pydantic)
