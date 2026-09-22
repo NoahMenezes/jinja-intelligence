@@ -1,0 +1,7 @@
+{{ user.name | upper }}
+{{ items[page] | join(", ") }}
+{{ total * (1 + tax) }}
+{{ "Guest" if not user else user.name }}
+{{ config["title"] | default('Untitled') | trim }}
+{{ [a, b] | length is odd }}
+{{ {"mode": mode, "debug": true} }}

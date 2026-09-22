@@ -2,18 +2,19 @@
 
 > Truthful status. Only what exists is marked done.
 
-## Done (Phase 4/20)
+## Done (Phase 5/20)
 
 - Project tooling: Bun + strict TypeScript + Vitest + build scripts.
 - Core types and utils: Position/Range/TextEdit/URIs, range/string/path helpers.
 - Document engine: immutable Document, DocumentManager, UTF-16 offset/position conversion.
 - Jinja lexer: ranged tokens for {{ }}, {% %}, {# #} with graceful errors.
+- Jinja expressions: ranged AST + Pratt parser for {{ }} (filters, tests, calls, operators, collections) with recovery.
 
 ## Planned (not implemented)
 
 - LSP lifecycle: initialize, initialized, shutdown, exit
 - Document sync: didOpen, didChange, didClose
-- Jinja parser / AST
+- Jinja statement parser (if/for/macro/block — Phase 6)
 - Syntax diagnostics
 - Scope and symbol analysis
 - Completion (statements, filters, tests, context-aware)
