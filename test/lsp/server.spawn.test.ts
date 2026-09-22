@@ -329,4 +329,64 @@ describe("server over stdio", () => {
     },
     TIMEOUT_MS + 5000,
   );
+
+  it(
+    "answers hover over stdio",
+    async () => {
+      const client = launch();
+      const init = await client.request("initialize", initParams());
+      const caps = (init.result as { capabilities: { hoverProvider: boolean } }).capabilities;
+      expect(caps.hoverProvider).toBe(true);
+      client.notify("initialized", {});
+      const uri = "file:///tmp/phase12.j2";
+      const text = "{{ user.name | upper }}";
+      client.notify("textDocument/didOpen", {
+        textDocument: { uri, languageId: "jinja", version: 1, text },
+      });
+      await client.waitForNotification("textDocument/publishDiagnostics");
+
+      const filter = await client.request("textDocument/hover", {
+        textDocument: { uri },
+        // Over `upper`.
+        position: { line: 0, character: 17 },
+      });
+      const filterValue = hoverText(filter.result);
+      expect(filterValue).toContain("upper(value)");
+
+      const variable = await client.request("textDocument/hover", {
+        textDocument: { uri },
+        // Over `user`.
+        position: { line: 0, character: 4 },
+      });
+      expect(hoverText(variable.result)).toContain("template context");
+
+      const blank = await client.request("textDocument/hover", {
+        textDocument: { uri },
+        // Over the closing braces: no word, no hover.
+        position: { line: 0, character: 22 },
+      });
+      expect(blank.result).toBeNull();
+
+      const shutdown = await client.request("shutdown", undefined);
+      expect(shutdown.error).toBeUndefined();
+      client.notify("exit", undefined);
+      await expect(client.waitForExit()).resolves.toBe(0);
+    },
+    TIMEOUT_MS + 5000,
+  );
 });
+
+/** Extract Markdown hover text, tolerating a null result. */
+function hoverText(result: unknown): string {
+  if (result === null || result === undefined) {
+    return "";
+  }
+  const contents = (result as { contents: unknown }).contents;
+  if (typeof contents === "string") {
+    return contents;
+  }
+  if (typeof contents === "object" && contents !== null && "value" in contents) {
+    return String((contents as { value: unknown }).value);
+  }
+  return "";
+}

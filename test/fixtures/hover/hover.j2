@@ -1,0 +1,12 @@
+{% for user in users %}
+  {{ user.name | upper }}
+{% endfor %}
+{% macro badge(text, level="info") %}{{ text }}{% endmacro %}
+{% import "forms.html" as forms %}
+{{ forms.input("q") }}
+{{ user is defined }}
+{% if count is odd %}x{% endif %}
+{{ range(3) }}
+{{ loop_missing }}
+{{ user.nickname }}
+{% extends "base.html" %}

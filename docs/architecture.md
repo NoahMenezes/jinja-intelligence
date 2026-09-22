@@ -31,11 +31,10 @@ VS Code / Neovim / Zed / Helix / VSCodium
 - Error recovery: broken templates produce partial results, never crash the server.
 - No full-workspace scans per keystroke; prefer caches, indexes, incremental updates, debouncing.
 
-## Current state (Phase 11/20)
+## Current state (Phase 12/20)
 
-Context-aware completion (`src/features/completion/` + analysis) done:
-scope-chain variables, builtins, file-context externals (ranked 0/1/2),
-`loop.*` properties, `.` trigger. Template-file names need the project
-index (Phase 16); prose needs hover docs (Phase 12). Per-keystroke
-parse+analyze is fine at template scale; caching is Phase 19.
-Phase 12 introduces hover and documentation.
+Hover documentation (`src/features/hover/` + `src/jinja/docs/` data) done:
+filters/tests/keywords/symbols/macros/builtins/`loop` attributes with
+Markdown rendering; unknown positions return null (never fiction); docs data
+lives separately from handlers and also feeds completion one-liners.
+Phase 13 introduces template resolution and go-to-definition.

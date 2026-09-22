@@ -1,5 +1,7 @@
 import { CompletionItemKind, type CompletionItem } from "vscode-languageserver/node.js";
 import { BUILTINS } from "../../jinja/syntax/builtins.js";
+import { FILTER_DOCS } from "../../jinja/docs/filters.js";
+import { TEST_DOCS } from "../../jinja/docs/tests.js";
 import { FILTERS } from "../../jinja/syntax/filters.js";
 import { TESTS } from "../../jinja/syntax/tests.js";
 
@@ -37,26 +39,36 @@ export function buildStatementItems(): CompletionItem[] {
 
 /** Built-in Jinja filters, suggested after `|`. */
 export function buildFilterItems(): CompletionItem[] {
-  return [...FILTERS]
-    .sort()
-    .map((label) => ({
+  return [...FILTERS].sort().map((label) => {
+    const item: CompletionItem = {
       label,
       kind: CompletionItemKind.Function,
       detail: "filter",
       sortText: label,
-    }));
+    };
+    const description = FILTER_DOCS[label]?.description;
+    if (description !== undefined) {
+      item.documentation = description;
+    }
+    return item;
+  });
 }
 
 /** Built-in Jinja tests, suggested after `is`. */
 export function buildTestItems(): CompletionItem[] {
-  return [...TESTS]
-    .sort()
-    .map((label) => ({
+  return [...TESTS].sort().map((label) => {
+    const item: CompletionItem = {
       label,
       kind: CompletionItemKind.Value,
       detail: "test",
       sortText: label,
-    }));
+    };
+    const description = TEST_DOCS[label]?.description;
+    if (description !== undefined) {
+      item.documentation = description;
+    }
+    return item;
+  });
 }
 
 const KEYWORD_BUILTINS: ReadonlySet<string> = new Set(["true", "false", "none"]);

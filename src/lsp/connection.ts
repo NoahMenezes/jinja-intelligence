@@ -5,6 +5,7 @@ import {
   createConnection,
   type CompletionItem,
   type Connection,
+  type Hover,
   type InitializeParams,
   type InitializeResult,
 } from "vscode-languageserver/node.js";
@@ -15,6 +16,7 @@ import { resolveSettings } from "../config/settings.js";
 import { createLogger, type Logger } from "../utils/logging.js";
 import { publishDiagnostics } from "../features/diagnostics/diagnostics.js";
 import { complete } from "../features/completion/completion.js";
+import { hover } from "../features/hover/hover.js";
 import { DocumentSync } from "./document-sync.js";
 import { createInitializeResult, Lifecycle } from "./lifecycle.js";
 
@@ -87,6 +89,19 @@ export function createServer(): Server {
     } catch (error) {
       logger.error(`completion handler failed: ${String(error)}`);
       return [];
+    }
+  });
+
+  connection.onHover((params): Hover | null => {
+    try {
+      const document = sync.manager.get(params.textDocument.uri as UriString);
+      if (document === null) {
+        return null;
+      }
+      return hover(document.text, document.offsetAt(params.position));
+    } catch (error) {
+      logger.error(`hover handler failed: ${String(error)}`);
+      return null;
     }
   });
 

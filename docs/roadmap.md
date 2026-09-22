@@ -11,7 +11,7 @@
 - [x] Phase 9 — Scope & Symbol Analysis
 - [x] Phase 10 — Completion: Core
 - [x] Phase 11 — Completion: Context-Aware
-- [ ] Phase 12 — Hover & Documentation
+- [x] Phase 12 — Hover & Documentation
 - [ ] Phase 13 — Template Resolution + Definition
 - [ ] Phase 14 — References + Rename
 - [ ] Phase 15 — Symbols + Signature Help + Semantic Tokens

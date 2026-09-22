@@ -4,10 +4,10 @@ import { createServerCapabilities } from "../../src/lsp/capabilities.js";
 import { createInitializeResult, Lifecycle } from "../../src/lsp/lifecycle.js";
 
 describe("capabilities", () => {
-  it("advertises full sync, core completion, and no other intelligence", () => {
+  it("advertises full sync, completion, hover, and no other intelligence", () => {
     const caps = createServerCapabilities();
     expect(caps.textDocumentSync).toBe(TextDocumentSyncKind.Full);
-    expect(caps.hoverProvider).toBe(false);
+    expect(caps.hoverProvider).toBe(true);
     expect(caps.definitionProvider).toBe(false);
     expect(caps.referencesProvider).toBe(false);
     expect(caps.renameProvider).toBe(false);

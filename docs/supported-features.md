@@ -2,7 +2,7 @@
 
 > Truthful status. Only what exists is marked done.
 
-## Done (Phase 11/20)
+## Done (Phase 12/20)
 
 - Project tooling: Bun + strict TypeScript + Vitest + build scripts.
 - Core types and utils: Position/Range/TextEdit/URIs, range/string/path helpers.
@@ -15,6 +15,7 @@
 - Scope and symbol analysis (internal plumbing; nothing editor-visible yet): loop/set/macro/import/block/with bindings, shadowing, `resolveAt`, external-name collection.
 - Core completion: statement openers after `{%`, filters after `|`, tests after `is` (no variables/properties yet — Phase 11).
 - Context-aware completion: scope variables, builtins, file-context names, `loop.*` properties (template-file names need project indexing — Phase 16).
+- Hover documentation: filters, tests, keywords, symbols, macro signatures, builtins, `loop` attributes (typed properties and template references return nothing yet — Phases 13+).
 
 ## Diagnostic codes
 
@@ -30,8 +31,7 @@ Unknown tags (e.g. `{% fro x %}`) intentionally produce no diagnostics.
 
 ## Planned (not implemented)
 
-- Hover and documentation
-- Go-to-definition / template resolution
+- Template navigation (go-to-definition)
 - References / rename
 - Document symbols / workspace symbols / signature help / semantic tokens
 - Project indexing
