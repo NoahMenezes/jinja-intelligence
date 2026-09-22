@@ -1,0 +1,12 @@
+{% block outer %}
+  {% if a %}
+    {% for x in y %}
+      {{ x }}
+    {% endfor %}
+  {% else %}
+    {% set ns = namespace(found=false) %}
+    {% with found=true %}z{% endwith %}
+  {% endif %}
+  {% raw %}{{ literal }}{% endraw %}
+{% endblock %}
+{% block sidebar %}side{% endblock %}

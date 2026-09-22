@@ -15,13 +15,23 @@ describe("template", () => {
     expect(result.root.end).toBe("Hello {{ name }}!{# note #} Bye".length);
   });
 
-  it("preserves block tags as raw statements", () => {
+  it("parses block tags as statements and preserves unknown tags as raw", () => {
     const result = parseTemplate("{% if user %}x{% endif %}");
     expect(result.errors).toEqual([]);
-    expect(result.root.children.map((c) => c.kind)).toEqual(["RawStatement", "Text", "RawStatement"]);
+    expect(result.root.children.map((c) => c.kind)).toEqual(["If"]);
     const first = result.root.children[0];
-    if (first?.kind === "RawStatement") {
-      expect(first.value).toBe("{% if user %}");
+    if (first?.kind !== "If") {
+      throw new Error("Expected If node.");
+    }
+    expect(first.body.map((c) => c.kind)).toEqual(["Text"]);
+    expect(first.elseBody).toBeNull();
+
+    const unknown = parseTemplate("{% something %}");
+    expect(unknown.errors).toEqual([]);
+    expect(unknown.root.children.map((c) => c.kind)).toEqual(["RawStatement"]);
+    const raw = unknown.root.children[0];
+    if (raw?.kind === "RawStatement") {
+      expect(raw.value).toBe("{% something %}");
     } else {
       throw new Error("Expected RawStatement.");
     }

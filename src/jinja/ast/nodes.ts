@@ -13,7 +13,27 @@ export interface TemplateNode extends BaseNode {
   readonly children: readonly TemplateChild[];
 }
 
-export type TemplateChild = TextNode | OutputNode | CommentNode | RawStatementNode;
+export type TemplateChild = TextNode | OutputNode | CommentNode | Statement | RawStatementNode;
+
+/**
+ * Block-level statements. Every node retains exact source offsets so
+ * diagnostics, navigation, and rename can map back to the document.
+ */
+export type Statement =
+  | IfNode
+  | ForNode
+  | SetNode
+  | BlockNode
+  | ExtendsNode
+  | IncludeNode
+  | ImportNode
+  | FromNode
+  | MacroNode
+  | CallBlockNode
+  | FilterBlockNode
+  | WithNode
+  | RawBlockNode
+  | DoNode;
 
 export interface TextNode extends BaseNode {
   readonly kind: "Text";
@@ -31,12 +51,143 @@ export interface CommentNode extends BaseNode {
 }
 
 /**
- * Opaque {% ... %} tag. Phase 5 preserves exact source without assigning
- * meaning; Phase 6 refines these into statement nodes.
+ * Opaque {% ... %} tag: unknown statements and stray end tags.
+ * Phase 5 produced these for every block tag; Phase 6 refines known tags
+ * into Statement nodes and keeps this for the rest. Exact source preserved.
  */
 export interface RawStatementNode extends BaseNode {
   readonly kind: "RawStatement";
   readonly value: string;
+}
+
+export interface ElifBranch {
+  readonly condition: Expression;
+  readonly body: readonly TemplateChild[];
+}
+
+export interface IfNode extends BaseNode {
+  readonly kind: "If";
+  readonly condition: Expression;
+  readonly body: readonly TemplateChild[];
+  readonly elifs: readonly ElifBranch[];
+  readonly elseBody: readonly TemplateChild[] | null;
+}
+
+export interface ForNode extends BaseNode {
+  readonly kind: "For";
+  readonly targets: readonly string[];
+  readonly iterable: Expression;
+  readonly body: readonly TemplateChild[];
+  readonly elseBody: readonly TemplateChild[] | null;
+  readonly recursive: boolean;
+}
+
+export interface SetNode extends BaseNode {
+  readonly kind: "Set";
+  /** Null when the target is missing (truncated tag). */
+  readonly target: string | null;
+  /** Assigned value for `{% set x = ... %}`; null for block-set or truncated tags. */
+  readonly value: Expression | null;
+  /** Body for `{% set x %}...{% endset %}`; null for value-set. */
+  readonly body: readonly TemplateChild[] | null;
+  readonly namespaceAttribute: string | null;
+}
+
+export interface BlockNode extends BaseNode {
+  readonly kind: "Block";
+  /** Null when the block name is missing. */
+  readonly name: string | null;
+  readonly body: readonly TemplateChild[];
+  readonly scoped: boolean;
+}
+
+export interface ExtendsNode extends BaseNode {
+  readonly kind: "Extends";
+  /** Null when the parent expression is missing. */
+  readonly parent: Expression | null;
+}
+
+export interface IncludeNode extends BaseNode {
+  readonly kind: "Include";
+  /** Null when the template expression is missing. */
+  readonly template: Expression | null;
+  readonly ignoreMissing: boolean;
+  readonly withoutContext: boolean;
+  readonly withContext: boolean;
+}
+
+export interface ImportNode extends BaseNode {
+  readonly kind: "Import";
+  /** Null when the template expression is missing. */
+  readonly template: Expression | null;
+  /** Null when the alias is missing. */
+  readonly alias: string | null;
+}
+
+export interface ImportName {
+  readonly name: string;
+  /** Null when there is no `as` alias. */
+  readonly alias: string | null;
+}
+
+export interface FromNode extends BaseNode {
+  readonly kind: "From";
+  /** Null when the template expression is missing. */
+  readonly template: Expression | null;
+  readonly names: readonly ImportName[];
+}
+
+export interface MacroParam {
+  readonly name: string;
+  readonly defaultValue: Expression | null;
+}
+
+export interface MacroNode extends BaseNode {
+  readonly kind: "Macro";
+  /** Null when the macro name is missing. */
+  readonly name: string | null;
+  readonly params: readonly MacroParam[];
+  readonly body: readonly TemplateChild[];
+}
+
+export interface CallBlockNode extends BaseNode {
+  readonly kind: "CallBlock";
+  /** Null when the callee is missing. */
+  readonly callee: Expression | null;
+  readonly args: readonly CallArgument[];
+  readonly body: readonly TemplateChild[];
+}
+
+export interface FilterBlockNode extends BaseNode {
+  readonly kind: "FilterBlock";
+  /** Null when the filter name is missing. */
+  readonly name: string | null;
+  readonly args: readonly CallArgument[];
+  readonly body: readonly TemplateChild[];
+}
+
+export interface WithAssignment {
+  readonly name: string;
+  readonly value: Expression | null;
+}
+
+export interface WithNode extends BaseNode {
+  readonly kind: "With";
+  readonly assignments: readonly WithAssignment[];
+  readonly body: readonly TemplateChild[];
+  readonly withoutContext: boolean;
+}
+
+export interface RawBlockNode extends BaseNode {
+  readonly kind: "RawBlock";
+  /** Inner source preserved verbatim as text. */
+  readonly body: readonly TextNode[];
+}
+
+export interface DoNode extends BaseNode {
+  readonly kind: "Do";
+  /** Null when the expression is missing (truncated tag). */
+  readonly expr: Expression | null;
 }
 
 export type Expression =

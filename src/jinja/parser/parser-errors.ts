@@ -8,7 +8,11 @@ export type ParseErrorCode =
   | "unterminated-expression"
   | "expected-expression"
   | "expected-property"
-  | "expected-close";
+  | "expected-close"
+  | "missing-end-tag"
+  | "mismatched-end-tag"
+  | "expected-statement"
+  | "expected-block-name";
 
 export interface ParseError {
   readonly code: ParseErrorCode;

@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% import "forms.html" as forms %}
+{% from "macros.html" import button as btn, card %}
+{% block content scoped %}
+  {% if user %}
+    <h1>{{ user.name | upper }}</h1>
+  {% elif guest %}
+    <h1>Guest</h1>
+  {% else %}
+    <h1>Anonymous</h1>
+  {% endif %}
+  {% for item in items recursive %}
+    {{ loop.index }}: {{ item.title | default("untitled") }}
+  {% else %}
+    No items.
+  {% endfor %}
+  {% set total = items | length %}
+  {% set headline %}Featured{% endset %}
+  {% macro badge(text, level="info") %}<span>{{ text }}</span>{% endmacro %}
+  {% call badge("hi") %}ignored{% endcall %}
+  {% filter trim %}  padded  {% endfilter %}
+  {% with mode="full" %}x{% endwith %}
+  {% do log("rendered") %}
+  {% include "footer.html" ignore missing with context %}
+{% endblock %}
