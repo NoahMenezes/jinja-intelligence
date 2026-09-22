@@ -31,10 +31,12 @@ VS Code / Neovim / Zed / Helix / VSCodium
 - Error recovery: broken templates produce partial results, never crash the server.
 - No full-workspace scans per keystroke; prefer caches, indexes, incremental updates, debouncing.
 
-## Current state (Phase 12/20)
+## Current state (Phase 13/20)
 
-Hover documentation (`src/features/hover/` + `src/jinja/docs/` data) done:
-filters/tests/keywords/symbols/macros/builtins/`loop` attributes with
-Markdown rendering; unknown positions return null (never fiction); docs data
-lives separately from handlers and also feeds completion one-liners.
-Phase 13 introduces template resolution and go-to-definition.
+Template navigation (`src/templates/resolver.ts`, `src/project/workspace.ts`,
+`src/jinja/ast/query.ts`, `src/features/definition/`) done: workspace roots
+captured at initialize, file-relative/root/`templates/`/configured-dir
+resolution, cross-file macro jumps via on-demand parsing (no index yet),
+local-symbol definitions, `templateDirectories` setting. Block inheritance
+chains need the project index (Phase 16).
+Phase 14 introduces references and rename.

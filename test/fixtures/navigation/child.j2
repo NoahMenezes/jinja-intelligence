@@ -1,0 +1,9 @@
+{% extends "base.j2" %}
+{% include "nav.j2" %}
+{% block content %}
+  {% for user in users %}
+    {{ user.name }}
+  {% endfor %}
+  {% set title = "Home" %}
+  {{ title }}
+{% endblock %}

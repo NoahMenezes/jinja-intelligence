@@ -4,13 +4,17 @@ export interface ServerSettings {
   readonly maxLogLines?: number;
   /** Reserved for Phase 16 template-directory configuration. */
   readonly templateExtensions?: readonly string[];
+  /** Extra template lookup directories: absolute paths or workspace-relative. */
+  readonly templateDirectories?: readonly string[];
 }
 
 export const DEFAULT_SETTINGS: Required<Pick<ServerSettings, "maxLogLines">> & {
   readonly templateExtensions: readonly string[];
+  readonly templateDirectories: readonly string[];
 } = {
   maxLogLines: 500,
   templateExtensions: [".jinja", ".jinja2", ".j2"],
+  templateDirectories: [],
 };
 
 /** Merge partial user settings over defaults. Total: never throws. */
@@ -25,5 +29,8 @@ export function resolveSettings(input?: Partial<ServerSettings> | null): typeof 
   const templateExtensions = Array.isArray(input.templateExtensions)
     ? input.templateExtensions.filter((e): e is string => typeof e === "string" && e.length > 0)
     : [...DEFAULT_SETTINGS.templateExtensions];
-  return { maxLogLines, templateExtensions };
+  const templateDirectories = Array.isArray(input.templateDirectories)
+    ? input.templateDirectories.filter((e): e is string => typeof e === "string" && e.length > 0)
+    : [...DEFAULT_SETTINGS.templateDirectories];
+  return { maxLogLines, templateExtensions, templateDirectories };
 }

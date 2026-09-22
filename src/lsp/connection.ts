@@ -5,9 +5,11 @@ import {
   createConnection,
   type CompletionItem,
   type Connection,
+  type Definition,
   type Hover,
   type InitializeParams,
   type InitializeResult,
+  type Location,
 } from "vscode-languageserver/node.js";
 import { TextDocument } from "vscode-languageserver-textdocument";
 import { SERVER_NAME, SERVER_VERSION } from "../index.js";
@@ -16,7 +18,9 @@ import { resolveSettings } from "../config/settings.js";
 import { createLogger, type Logger } from "../utils/logging.js";
 import { publishDiagnostics } from "../features/diagnostics/diagnostics.js";
 import { complete } from "../features/completion/completion.js";
+import { definition } from "../features/definition/definition.js";
 import { hover } from "../features/hover/hover.js";
+import { rootsFromInitialize } from "../project/workspace.js";
 import { DocumentSync } from "./document-sync.js";
 import { createInitializeResult, Lifecycle } from "./lifecycle.js";
 
@@ -39,6 +43,8 @@ export function createServer(): Server {
   const lifecycle = new Lifecycle();
   const sync = new DocumentSync(logger);
   const documents = new TextDocuments(TextDocument);
+  let roots: string[] = [];
+  let templateDirs: string[] = [];
 
   connection.onInitialize((params: InitializeParams): InitializeResult => {
     try {
@@ -47,8 +53,9 @@ export function createServer(): Server {
           | Record<string, unknown>
           | undefined,
       );
+      roots = rootsFromInitialize(params);
+      templateDirs = [...settings.templateDirectories];
       logger.info(`Initializing ${SERVER_NAME} ${SERVER_VERSION} (sync=${TextDocumentSyncKind.Full}, settings=${JSON.stringify(settings)})`);
-      void params;
       return createInitializeResult(SERVER_NAME, SERVER_VERSION);
     } catch (error) {
       logger.error(`initialize failed: ${String(error)}`);
@@ -67,7 +74,8 @@ export function createServer(): Server {
   connection.onDidChangeConfiguration((change): void => {
     try {
       const raw = (change.settings as Record<string, unknown> | undefined)?.["jinjaIntelligence"];
-      resolveSettings(raw as Record<string, unknown> | undefined);
+      const settings = resolveSettings(raw as Record<string, unknown> | undefined);
+      templateDirs = [...settings.templateDirectories];
       logger.info("Configuration updated.");
     } catch (error) {
       logger.error(`configuration handler failed: ${String(error)}`);
@@ -101,6 +109,23 @@ export function createServer(): Server {
       return hover(document.text, document.offsetAt(params.position));
     } catch (error) {
       logger.error(`hover handler failed: ${String(error)}`);
+      return null;
+    }
+  });
+
+  connection.onDefinition((params): Definition | null => {
+    try {
+      const document = sync.manager.get(params.textDocument.uri as UriString);
+      if (document === null) {
+        return null;
+      }
+      const found: Location | null = definition(document.text, params.textDocument.uri, document.offsetAt(params.position), {
+        roots,
+        templateDirs,
+      });
+      return found;
+    } catch (error) {
+      logger.error(`definition handler failed: ${String(error)}`);
       return null;
     }
   });

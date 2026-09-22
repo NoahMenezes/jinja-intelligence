@@ -44,3 +44,7 @@ export * from "./jinja/docs/tests.js";
 export * from "./jinja/docs/keywords.js";
 export * from "./jinja/docs/builtins.js";
 export * from "./features/hover/hover.js";
+export * from "./jinja/ast/query.js";
+export * from "./templates/resolver.js";
+export * from "./project/workspace.js";
+export * from "./features/definition/definition.js";

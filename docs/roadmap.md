@@ -12,7 +12,7 @@
 - [x] Phase 10 — Completion: Core
 - [x] Phase 11 — Completion: Context-Aware
 - [x] Phase 12 — Hover & Documentation
-- [ ] Phase 13 — Template Resolution + Definition
+- [x] Phase 13 — Template Resolution + Definition
 - [ ] Phase 14 — References + Rename
 - [ ] Phase 15 — Symbols + Signature Help + Semantic Tokens
 - [ ] Phase 16 — Project Intelligence & Indexing

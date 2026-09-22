@@ -1,4 +1,6 @@
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 
@@ -364,6 +366,67 @@ describe("server over stdio", () => {
         textDocument: { uri },
         // Over the closing braces: no word, no hover.
         position: { line: 0, character: 22 },
+      });
+      expect(blank.result).toBeNull();
+
+      const shutdown = await client.request("shutdown", undefined);
+      expect(shutdown.error).toBeUndefined();
+      client.notify("exit", undefined);
+      await expect(client.waitForExit()).resolves.toBe(0);
+    },
+    TIMEOUT_MS + 5000,
+  );
+
+  it(
+    "answers go-to-definition over stdio",
+    async () => {
+      const client = launch();
+      const init = await client.request("initialize", initParams());
+      const caps = (init.result as { capabilities: { definitionProvider: boolean } }).capabilities;
+      expect(caps.definitionProvider).toBe(true);
+      client.notify("initialized", {});
+
+      // Real fixture files: the server reads them from disk.
+      const dir = fileURLToPath(new URL("../fixtures/navigation/", import.meta.url));
+      const childUri = `file://${join(dir, "child.j2")}`;
+      const baseUri = `file://${join(dir, "base.j2")}`;
+      const childText = readFileSync(join(dir, "child.j2"), "utf8");
+      client.notify("textDocument/didOpen", {
+        textDocument: { uri: childUri, languageId: "jinja", version: 1, text: childText },
+      });
+      await client.waitForNotification("textDocument/publishDiagnostics");
+
+      // Over `"base.j2"` in the extends tag.
+      const file = await client.request("textDocument/definition", {
+        textDocument: { uri: childUri },
+        position: { line: 0, character: 14 },
+      });
+      expect((file.result as { uri: string } | null)?.uri).toBe(baseUri);
+
+      const uri = "file:///tmp/phase13.j2";
+      client.notify("textDocument/didOpen", {
+        textDocument: {
+          uri,
+          languageId: "jinja",
+          version: 1,
+          text: "{% for user in users %}{{ user }}{% endfor %}",
+        },
+      });
+      await client.waitForNotification(
+        "textDocument/publishDiagnostics",
+        (m) => (m.params as { uri: string }).uri === uri,
+      );
+      const local = await client.request("textDocument/definition", {
+        textDocument: { uri },
+        // Over the `user` use.
+        position: { line: 0, character: 27 },
+      });
+      expect((local.result as { uri: string } | null)?.uri).toBe(uri);
+
+      const blank = await client.request("textDocument/definition", {
+        textDocument: { uri },
+        // Inside the tag opener: no word, no definition.
+        position: { line: 0, character: 0 },
       });
       expect(blank.result).toBeNull();
 
