@@ -1,4 +1,9 @@
-import { TextDocumentSyncKind, type ServerCapabilities } from "vscode-languageserver/node.js";
+import {
+  TextDocumentSyncKind,
+  type SemanticTokensOptions,
+  type ServerCapabilities,
+} from "vscode-languageserver/node.js";
+import { SEMANTIC_TOKENS_LEGEND } from "../features/semantic-tokens/semantic-tokens.js";
 
 /**
  * Server capabilities. Phase 14 adds references and rename; completion,
@@ -13,7 +18,12 @@ export function createServerCapabilities(): ServerCapabilities {
     definitionProvider: true,
     referencesProvider: true,
     renameProvider: true,
-    documentSymbolProvider: false,
-    workspaceSymbolProvider: false,
+    documentSymbolProvider: true,
+    workspaceSymbolProvider: true,
+    signatureHelpProvider: { triggerCharacters: ["(", ","] },
+    semanticTokensProvider: {
+      legend: { tokenTypes: [...SEMANTIC_TOKENS_LEGEND.tokenTypes], tokenModifiers: [] },
+      full: true,
+    } satisfies SemanticTokensOptions,
   };
 }

@@ -1,6 +1,6 @@
 {
   "name": "jinja-intelligence",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "description": "Python-aware, project-aware Language Server for Jinja templates",
   "type": "module",
   "license": "MIT",

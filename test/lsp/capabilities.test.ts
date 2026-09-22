@@ -4,18 +4,18 @@ import { createServerCapabilities } from "../../src/lsp/capabilities.js";
 import { createInitializeResult, Lifecycle } from "../../src/lsp/lifecycle.js";
 
 describe("capabilities", () => {
-  it("advertises full sync, completion, hover, definition, references, rename", () => {
+  it("advertises full sync, completion, hover, definition, references, rename, symbols, signatures, tokens", () => {
     const caps = createServerCapabilities();
     expect(caps.textDocumentSync).toBe(TextDocumentSyncKind.Full);
     expect(caps.hoverProvider).toBe(true);
     expect(caps.definitionProvider).toBe(true);
     expect(caps.referencesProvider).toBe(true);
     expect(caps.renameProvider).toBe(true);
-    expect(caps.documentSymbolProvider).toBe(false);
-    expect(caps.workspaceSymbolProvider).toBe(false);
+    expect(caps.documentSymbolProvider).toBe(true);
+    expect(caps.workspaceSymbolProvider).toBe(true);
     expect(caps.completionProvider).toEqual({ triggerCharacters: ["|", "."], resolveProvider: false });
-    expect(caps.signatureHelpProvider).toBeUndefined();
-    expect(caps.semanticTokensProvider).toBeUndefined();
+    expect(caps.signatureHelpProvider).toEqual({ triggerCharacters: ["(", ","] });
+    expect(caps.semanticTokensProvider).toBeDefined();
   });
 });
 

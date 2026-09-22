@@ -491,6 +491,71 @@ describe("server over stdio", () => {
     },
     TIMEOUT_MS + 5000,
   );
+
+  it(
+    "answers symbols, signature help, and semantic tokens over stdio",
+    async () => {
+      const client = launch();
+      const init = await client.request("initialize", initParams());
+      const caps = (
+        init.result as {
+          capabilities: {
+            documentSymbolProvider: boolean;
+            workspaceSymbolProvider: boolean;
+            signatureHelpProvider: { triggerCharacters: string[] };
+            semanticTokensProvider: { legend: { tokenTypes: string[] } };
+          };
+        }
+      ).capabilities;
+      expect(caps.documentSymbolProvider).toBe(true);
+      expect(caps.workspaceSymbolProvider).toBe(true);
+      expect(caps.signatureHelpProvider.triggerCharacters).toContain("(");
+      expect(caps.semanticTokensProvider.legend.tokenTypes).toContain("keyword");
+      client.notify("initialized", {});
+      const uri = "file:///tmp/phase15.j2";
+      const text = '{% macro badge(text) %}{{ text }}{% endmacro %}{{ badge("a", }}';
+      client.notify("textDocument/didOpen", {
+        textDocument: { uri, languageId: "jinja", version: 1, text },
+      });
+      await client.waitForNotification(
+        "textDocument/publishDiagnostics",
+        (m) => (m.params as { uri: string }).uri === uri,
+      );
+
+      const symbols = await client.request("textDocument/documentSymbol", {
+        textDocument: { uri },
+      });
+      const names = ((symbols.result as { name: string }[] | null) ?? []).map((s) => s.name);
+      expect(names).toContain("badge");
+
+      const searched = await client.request("workspace/symbol", { query: "bad" });
+      const hits = ((searched.result as { name: string }[] | null) ?? []).map((s) => s.name);
+      expect(hits).toContain("badge");
+
+      const sig = await client.request("textDocument/signatureHelp", {
+        textDocument: { uri },
+        // Inside the call arguments, after the comma.
+        position: { line: 0, character: 60 },
+      });
+      const label = (
+        (sig.result as { signatures: { label: string }[] } | null)?.signatures[0] as { label: string } | undefined
+      )?.label;
+      expect(label).toContain("badge(");
+
+      const tokens = await client.request("textDocument/semanticTokens/full", {
+        textDocument: { uri },
+      });
+      const data = (tokens.result as { data: number[] } | null)?.data ?? [];
+      expect(data.length).toBeGreaterThan(0);
+      expect(data.length % 5).toBe(0);
+
+      const shutdown = await client.request("shutdown", undefined);
+      expect(shutdown.error).toBeUndefined();
+      client.notify("exit", undefined);
+      await expect(client.waitForExit()).resolves.toBe(0);
+    },
+    TIMEOUT_MS + 5000,
+  );
 });
 
 /** Extract Markdown hover text, tolerating a null result. */

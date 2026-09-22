@@ -1,0 +1,5 @@
+{% set title = "Home" %}
+{% import "forms.html" as forms %}
+{% macro badge(text, level="info") %}{{ text }}{% endmacro %}
+{% for user in users %}{{ user }}{% endfor %}
+{% block content %}x{% endblock %}

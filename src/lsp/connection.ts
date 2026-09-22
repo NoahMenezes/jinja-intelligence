@@ -6,10 +6,14 @@ import {
   type CompletionItem,
   type Connection,
   type Definition,
+  type DocumentSymbol,
   type Hover,
   type InitializeParams,
   type InitializeResult,
   type Location,
+  type SemanticTokens,
+  type SignatureHelp,
+  type SymbolInformation,
   type WorkspaceEdit,
 } from "vscode-languageserver/node.js";
 import { TextDocument } from "vscode-languageserver-textdocument";
@@ -23,6 +27,9 @@ import { definition } from "../features/definition/definition.js";
 import { hover } from "../features/hover/hover.js";
 import { references } from "../features/references/references.js";
 import { rename } from "../features/rename/rename.js";
+import { signatureHelp } from "../features/signature-help/signature-help.js";
+import { documentSymbols, workspaceSymbols } from "../features/symbols/symbols.js";
+import { semanticTokens } from "../features/semantic-tokens/semantic-tokens.js";
 import { rootsFromInitialize } from "../project/workspace.js";
 import { DocumentSync } from "./document-sync.js";
 import { createInitializeResult, Lifecycle } from "./lifecycle.js";
@@ -161,6 +168,62 @@ export function createServer(): Server {
     } catch (error) {
       logger.error(`rename handler failed: ${String(error)}`);
       return null;
+    }
+  });
+
+  connection.onDocumentSymbol((params): DocumentSymbol[] => {
+    try {
+      const document = sync.manager.get(params.textDocument.uri as UriString);
+      if (document === null) {
+        return [];
+      }
+      return documentSymbols(document.text);
+    } catch (error) {
+      logger.error(`documentSymbol handler failed: ${String(error)}`);
+      return [];
+    }
+  });
+
+  connection.onWorkspaceSymbol((params): SymbolInformation[] => {
+    try {
+      const out: SymbolInformation[] = [];
+      for (const uri of sync.manager.uris()) {
+        const document = sync.manager.get(uri);
+        if (document === null) {
+          continue;
+        }
+        out.push(...workspaceSymbols(document.text, uri, params.query));
+      }
+      return out;
+    } catch (error) {
+      logger.error(`workspaceSymbol handler failed: ${String(error)}`);
+      return [];
+    }
+  });
+
+  connection.onSignatureHelp((params): SignatureHelp | null => {
+    try {
+      const document = sync.manager.get(params.textDocument.uri as UriString);
+      if (document === null) {
+        return null;
+      }
+      return signatureHelp(document.text, document.offsetAt(params.position));
+    } catch (error) {
+      logger.error(`signatureHelp handler failed: ${String(error)}`);
+      return null;
+    }
+  });
+
+  connection.languages.semanticTokens.on((params): SemanticTokens => {
+    try {
+      const document = sync.manager.get(params.textDocument.uri as UriString);
+      if (document === null) {
+        return { data: [] };
+      }
+      return semanticTokens(document.text);
+    } catch (error) {
+      logger.error(`semanticTokens handler failed: ${String(error)}`);
+      return { data: [] };
     }
   });
 

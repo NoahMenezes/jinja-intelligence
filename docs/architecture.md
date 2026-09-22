@@ -31,11 +31,10 @@ VS Code / Neovim / Zed / Helix / VSCodium
 - Error recovery: broken templates produce partial results, never crash the server.
 - No full-workspace scans per keystroke; prefer caches, indexes, incremental updates, debouncing.
 
-## Current state (Phase 14/20)
+## Current state (Phase 15/20)
 
-References and rename (`src/features/references/`, `src/features/rename/`)
-done: identity-based single-file reference search with `includeDeclaration`,
-validated rename emitting token-precise edits, refusal on anything unsafe.
-Statement spans are never edit ranges; cross-file work needs the project
-index (Phase 16). Phase 15 introduces symbols, signature help, and semantic
-tokens.
+Symbols, signature help, and semantic tokens done: document outline with
+macro params nested, current-file workspace search, macro/filter signatures,
+delta-encoded tokens from lexer roles plus analysis (single shared legend).
+Range tokens and cross-file search need the project index (Phase 16).
+Phase 16 introduces project intelligence and indexing.

@@ -51,3 +51,6 @@ export * from "./features/definition/definition.js";
 export * from "./features/references/bindings.js";
 export * from "./features/references/references.js";
 export * from "./features/rename/rename.js";
+export * from "./features/symbols/symbols.js";
+export * from "./features/signature-help/signature-help.js";
+export * from "./features/semantic-tokens/semantic-tokens.js";
