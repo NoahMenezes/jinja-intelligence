@@ -581,7 +581,9 @@ function stripSuffixFlags(inner: readonly Token[], words: readonly string[]): { 
   for (let k = 0; k < words.length; k++) {
     const t = tail[k];
     const w = words[k];
-    if (t === undefined || t.kind !== "Keyword" || t.value !== w) {
+    // Contextual flags (`ignore missing`, `without context`) may lex as
+    // Identifier when absent from the keyword set; match by value either way.
+    if (t === undefined || (t.kind !== "Keyword" && t.kind !== "Identifier") || t.value !== w) {
       return { rest: [...inner], matched: false };
     }
   }

@@ -2,7 +2,7 @@
 
 A modern, Python-aware, project-aware Language Server for Jinja templates.
 
-> **Status (Phase 5/20):** Core types, document engine, lexer, and expression parser done. No statement/LSP logic yet.
+> **Status (Phase 6/20):** Full Jinja parser done (expressions + nested statements with recovery). No LSP logic yet — try `parseTemplate` in code.
 
 The LSP server is the core product. It is editor-agnostic and communicates over
 standard LSP (stdio), so VS Code, Neovim, Zed, Helix, VSCodium and other

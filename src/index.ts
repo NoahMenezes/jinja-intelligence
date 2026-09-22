@@ -18,4 +18,5 @@ export * from "./jinja/syntax/builtins.js";
 export * from "./jinja/ast/nodes.js";
 export * from "./jinja/parser/parser-errors.js";
 export * from "./jinja/parser/expressions.js";
+export * from "./jinja/parser/statements.js";
 export * from "./jinja/parser/parser.js";

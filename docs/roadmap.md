@@ -5,7 +5,7 @@
 - [x] Phase 3 — Document Engine
 - [x] Phase 4 — Jinja Lexer
 - [x] Phase 5 — AST + Expression Parser
-- [ ] Phase 6 — Statement Parser + Recovery
+- [x] Phase 6 — Statement Parser + Recovery
 - [ ] Phase 7 — LSP Shell & Lifecycle
 - [ ] Phase 8 — Syntax Diagnostics
 - [ ] Phase 9 — Scope & Symbol Analysis

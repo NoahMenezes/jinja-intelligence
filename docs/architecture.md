@@ -31,8 +31,9 @@ VS Code / Neovim / Zed / Helix / VSCodium
 - Error recovery: broken templates produce partial results, never crash the server.
 - No full-workspace scans per keystroke; prefer caches, indexes, incremental updates, debouncing.
 
-## Current state (Phase 5/20)
+## Current state (Phase 6/20)
 
-AST (`src/jinja/ast/`) and expression parser (`src/jinja/parser/`) done.
-Total `parseTemplate()` with ranged nodes, `{% %}` preserved as RawStatement.
-Phase 6 introduces the statement parser.
+Statement parser (`src/jinja/parser/statements.ts`) done: nested If/For/Set/
+Block/Extends/Include/Import/From/Macro/CallBlock/FilterBlock/With/RawBlock/Do
+nodes with recovery (missing/mismatched ends, stray tags, unknown tags as raw).
+Phase 7 introduces the LSP shell.
