@@ -93,6 +93,30 @@ class TestClient {
       });
     });
   }
+
+  /**
+   * Wait for the next server-initiated notification with the given method.
+   * The library fires change-on-open, so didOpen yields two identical
+   * publishes; pass `match` to select by content (e.g. document version).
+   */
+  waitForNotification(method: string, match?: (msg: RpcMessage) => boolean): Promise<RpcMessage> {
+    return new Promise((resolve, reject) => {
+      const timer = setTimeout(() => {
+        reject(new Error(`Timed out waiting for notification ${method}. Server stderr: ${this.stderr.slice(-500)}`));
+      }, TIMEOUT_MS);
+      const poll = setInterval(() => {
+        const index = this.notifications.findIndex((n) => n.method === method && (match === undefined || match(n)));
+        if (index !== -1) {
+          const found = this.notifications.splice(index, 1)[0];
+          if (found !== undefined) {
+            clearTimeout(timer);
+            clearInterval(poll);
+            resolve(found);
+          }
+        }
+      }, 25);
+    });
+  }
 }
 
 const children: ChildProcessWithoutNullStreams[] = [];
@@ -164,6 +188,51 @@ describe("server over stdio", () => {
       await client.request("initialize", initParams());
       client.notify("exit", undefined);
       await expect(client.waitForExit()).resolves.toBe(1);
+    },
+    TIMEOUT_MS + 5000,
+  );
+
+  it(
+    "publishes syntax diagnostics on open, clears on fix and close",
+    async () => {
+      const client = launch();
+      await client.request("initialize", initParams());
+      client.notify("initialized", {});
+      const uri = "file:///tmp/phase8.html";
+
+      client.notify("textDocument/didOpen", {
+        textDocument: { uri, languageId: "jinja", version: 1, text: "{% if user %}{{ user. }}" },
+      });
+      const opened = await client.waitForNotification("textDocument/publishDiagnostics");
+      const openedParams = opened.params as { uri: string; diagnostics: { code: string; severity: number }[] };
+      expect(openedParams.uri).toBe(uri);
+      expect(openedParams.diagnostics.length).toBeGreaterThan(0);
+      expect(openedParams.diagnostics.every((d) => d.severity === 1)).toBe(true);
+
+      client.notify("textDocument/didChange", {
+        textDocument: { uri, version: 2 },
+        contentChanges: [{ text: "{% if user %}{{ user.name }}{% endif %}" }],
+      });
+      const fixed = await client.waitForNotification(
+        "textDocument/publishDiagnostics",
+        (m) => (m.params as { version?: number }).version === 2,
+      );
+      expect((fixed.params as { diagnostics: unknown[] }).diagnostics).toEqual([]);
+
+      client.notify("textDocument/didClose", { textDocument: { uri } });
+      const cleared = await client.waitForNotification(
+        "textDocument/publishDiagnostics",
+        (m) => {
+          const p = m.params as { version?: number; diagnostics: unknown[] };
+          return p.version === undefined && p.diagnostics.length === 0;
+        },
+      );
+      expect((cleared.params as { diagnostics: unknown[] }).diagnostics).toEqual([]);
+
+      const shutdown = await client.request("shutdown", undefined);
+      expect(shutdown.error).toBeUndefined();
+      client.notify("exit", undefined);
+      await expect(client.waitForExit()).resolves.toBe(0);
     },
     TIMEOUT_MS + 5000,
   );

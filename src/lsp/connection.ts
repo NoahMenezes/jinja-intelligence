@@ -11,6 +11,7 @@ import { TextDocument } from "vscode-languageserver-textdocument";
 import { SERVER_NAME, SERVER_VERSION } from "../index.js";
 import { resolveSettings } from "../config/settings.js";
 import { createLogger, type Logger } from "../utils/logging.js";
+import { publishDiagnostics } from "../features/diagnostics/diagnostics.js";
 import { DocumentSync } from "./document-sync.js";
 import { createInitializeResult, Lifecycle } from "./lifecycle.js";
 
@@ -74,15 +75,30 @@ export function createServer(): Server {
   });
 
   documents.onDidOpen((event): void => {
-    sync.applyTextDocument(event.document);
+    try {
+      sync.applyTextDocument(event.document);
+      publishDiagnostics(connection, event.document.uri, event.document.version, event.document.getText());
+    } catch (error) {
+      logger.error(`didOpen handler failed: ${String(error)}`);
+    }
   });
 
   documents.onDidChangeContent((event): void => {
-    sync.didChange(event.document.uri, event.document.getText(), event.document.version);
+    try {
+      sync.didChange(event.document.uri, event.document.getText(), event.document.version);
+      publishDiagnostics(connection, event.document.uri, event.document.version, event.document.getText());
+    } catch (error) {
+      logger.error(`didChange handler failed: ${String(error)}`);
+    }
   });
 
   documents.onDidClose((event): void => {
-    sync.didClose(event.document.uri);
+    try {
+      sync.didClose(event.document.uri);
+      connection.sendDiagnostics({ uri: event.document.uri, diagnostics: [] });
+    } catch (error) {
+      logger.error(`didClose handler failed: ${String(error)}`);
+    }
   });
 
   function start(): void {

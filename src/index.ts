@@ -31,3 +31,5 @@ export * from "./utils/logging.js";
 export * from "./lsp/capabilities.js";
 export * from "./lsp/lifecycle.js";
 export * from "./lsp/document-sync.js";
+export * from "./features/diagnostics/rules.js";
+export * from "./features/diagnostics/diagnostics.js";

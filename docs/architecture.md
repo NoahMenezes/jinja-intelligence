@@ -31,10 +31,10 @@ VS Code / Neovim / Zed / Helix / VSCodium
 - Error recovery: broken templates produce partial results, never crash the server.
 - No full-workspace scans per keystroke; prefer caches, indexes, incremental updates, debouncing.
 
-## Current state (Phase 7/20)
+## Current state (Phase 8/20)
 
-LSP shell (`src/server.ts`, `src/lsp/`) done: stdio transport, initialize/
-initialized/shutdown/exit, Full document sync bridged into DocumentManager
-(the source of truth for all future intelligence), settings plumbing stored
-for later phases, crash guards + correct exit codes. No intelligence yet.
-Phase 8 introduces syntax diagnostics publishing.
+Syntax diagnostics (`src/features/diagnostics/`) done: parser errors publish
+as versioned LSP diagnostics on open/change and clear on fix/close, with
+dedup + range clamping. Publishing is synchronous by design (deterministic,
+test-honest); debounced scheduling is a Phase 19 performance task.
+Phase 9 introduces scope and symbol analysis.

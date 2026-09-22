@@ -7,7 +7,7 @@
 - [x] Phase 5 — AST + Expression Parser
 - [x] Phase 6 — Statement Parser + Recovery
 - [x] Phase 7 — LSP Shell & Lifecycle
-- [ ] Phase 8 — Syntax Diagnostics
+- [x] Phase 8 — Syntax Diagnostics
 - [ ] Phase 9 — Scope & Symbol Analysis
 - [ ] Phase 10 — Completion: Core
 - [ ] Phase 11 — Completion: Context-Aware

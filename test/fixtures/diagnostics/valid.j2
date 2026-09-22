@@ -1,0 +1,6 @@
+{% extends "base.html" %}
+{% block content %}
+  {{ items[0].title | default("untitled") }}
+  {% for x in xs %}{{ x }}{% endfor %}
+{% endblock %}
+{# All valid: no diagnostics. #}
