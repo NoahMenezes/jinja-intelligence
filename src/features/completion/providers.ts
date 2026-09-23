@@ -90,3 +90,15 @@ export function buildBuiltinItems(exclude: ReadonlySet<string>): CompletionItem[
   }
   return items;
 }
+
+/** Template basenames from the project index, for string-literal positions. */
+export function buildTemplateItems(names: readonly string[]): CompletionItem[] {
+  return [...names]
+    .sort()
+    .map((label) => ({
+      label,
+      kind: CompletionItemKind.Module,
+      detail: "template",
+      sortText: label,
+    }));
+}

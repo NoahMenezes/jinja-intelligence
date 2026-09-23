@@ -2,7 +2,7 @@
 export interface ServerSettings {
   /** Maximum retained log lines for future file logging. Unused in Phase 7. */
   readonly maxLogLines?: number;
-  /** Reserved for Phase 16 template-directory configuration. */
+  /** Template file extensions scanned by the project index. */
   readonly templateExtensions?: readonly string[];
   /** Extra template lookup directories: absolute paths or workspace-relative. */
   readonly templateDirectories?: readonly string[];

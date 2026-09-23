@@ -16,7 +16,7 @@
 ```
 
 Settings key: `jinjaIntelligence`. Unknown keys are ignored; invalid values
-fall back to defaults. No config files are read. `templateDirectories`
-extends go-to-definition lookup (referring file's dir, workspace roots,
-`<root>/templates/` are always searched); `templateExtensions` is reserved
-for Phase 16 project configuration.
+fall back to defaults. No config files are read. `templateExtensions`
+selects scanned template files (`.html` is additionally marker-gated);
+`templateDirectories` extends both go-to-definition lookup and the index
+(referring file's dir, workspace roots, `<root>/templates/` always apply).

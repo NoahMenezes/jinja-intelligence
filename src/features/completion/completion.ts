@@ -1,20 +1,33 @@
 import type { CompletionItem } from "vscode-languageserver/node.js";
 import { parseTemplate } from "../../jinja/parser/parser.js";
 import { analyzeTemplate } from "../../jinja/analysis/analyzer.js";
+import { templateReferences } from "../../jinja/ast/query.js";
 import { lex } from "../../jinja/lexer/lexer.js";
 import type { Token } from "../../jinja/lexer/token-types.js";
-import { buildFilterItems, buildStatementItems, buildTestItems } from "./providers.js";
+import { buildFilterItems, buildStatementItems, buildTemplateItems, buildTestItems } from "./providers.js";
 import { buildPropertyItems, buildVariableItems } from "./variables.js";
 
-export type CompletionContext = "statement" | "filter" | "test" | "variable" | "property" | "none";
+export type CompletionContext =
+  | "statement"
+  | "filter"
+  | "test"
+  | "variable"
+  | "property"
+  | "template"
+  | "none";
+
+export interface CompletionOptions {
+  /** Template basenames from the project index (Phase 16). */
+  readonly templateNames?: readonly string[];
+}
 
 /**
  * Context-aware completion. Lexer-driven detection (multiline-safe, tolerant
  * of unclosed tags while typing); scope-driven items for variable and
- * property positions. Returns full category lists; clients filter on typing.
- * Template-file names and prose arrive in later phases.
+ * property positions; index-driven names in template strings. Returns full
+ * category lists; clients filter on typing. Prose arrives in later phases.
  */
-export function complete(text: string, offset: number): CompletionItem[] {
+export function complete(text: string, offset: number, options?: CompletionOptions): CompletionItem[] {
   try {
     const at = Math.min(Math.max(0, offset), text.length);
     switch (detectContext(text, at)) {
@@ -33,6 +46,8 @@ export function complete(text: string, offset: number): CompletionItem[] {
         }
         return buildPropertyItems(analyze(text), base.name, base.offset);
       }
+      case "template":
+        return buildTemplateItems(options?.templateNames ?? []);
       case "none":
         return [];
     }
@@ -43,6 +58,21 @@ export function complete(text: string, offset: number): CompletionItem[] {
 
 function analyze(text: string) {
   return analyzeTemplate(parseTemplate(text).root);
+}
+
+/** True when the offset sits inside a template-path string literal. */
+function inTemplateString(text: string, at: number): boolean {
+  try {
+    const root = parseTemplate(text).root;
+    for (const ref of templateReferences(root)) {
+      if (ref.expr.start < at && at < ref.expr.end) {
+        return true;
+      }
+    }
+    return false;
+  } catch {
+    return false;
+  }
 }
 
 /** Base word of a `base.attr` position: nearest identifier before the dot. */
@@ -104,13 +134,14 @@ export function detectContext(text: string, offset: number): CompletionContext {
   }
   const inBlock = open.kind === "BlockOpen";
 
-  // Inside a string literal: template names need the project index (later phase).
+  // Inside a string literal: template references offer index names,
+  // every other string offers nothing.
   for (const token of tokens) {
     if (token.start > at) {
       break;
     }
     if (token.kind === "String" && token.start < at && at < token.end) {
-      return "none";
+      return inTemplateString(text, at) ? "template" : "none";
     }
   }
 

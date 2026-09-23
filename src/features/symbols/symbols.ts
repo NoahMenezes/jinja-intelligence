@@ -2,6 +2,7 @@ import { SymbolKind, type DocumentSymbol, type SymbolInformation } from "vscode-
 import { analyzeTemplate } from "../../jinja/analysis/analyzer.js";
 import type { Symbol, SymbolKind as AnalysisKind } from "../../jinja/analysis/symbols.js";
 import { parseTemplate } from "../../jinja/parser/parser.js";
+import type { TemplateIndex } from "../../project/template-index.js";
 
 const KIND_MAP: Record<Exclude<AnalysisKind, "External">, (typeof SymbolKind)[keyof typeof SymbolKind]> = {
   Loop: SymbolKind.Variable,
@@ -88,7 +89,8 @@ function toDocumentSymbol(symbol: Symbol): DocumentSymbol | null {
 }
 
 /**
- * Workspace search, current-file scoped until the Phase 16 index lands.
+ * Single-file workspace search. Used as a fallback before the project index
+ * has scanned; prefer indexWorkspaceSymbols once scanned.
  * Case-insensitive substring; empty query returns all. Total, never throws.
  */
 export function workspaceSymbols(text: string, uri: string, query: string): SymbolInformation[] {
@@ -105,6 +107,38 @@ export function workspaceSymbols(text: string, uri: string, query: string): Symb
           continue;
         }
         out.push({ name: child.name, kind: child.kind, location: { uri, range: child.range } });
+      }
+    }
+    return out;
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Index-wide workspace search across every indexed file: macros and blocks
+ * whose names contain the query (case-insensitive; empty matches all).
+ * Total, never throws.
+ */
+export function indexWorkspaceSymbols(index: TemplateIndex, query: string): SymbolInformation[] {
+  try {
+    const needle = query.toLowerCase();
+    const matches = (name: string): boolean => needle.length === 0 || name.toLowerCase().includes(needle);
+    const out: SymbolInformation[] = [];
+    for (const uri of index.uris()) {
+      const entry = index.get(uri);
+      if (entry === null) {
+        continue;
+      }
+      for (const macro of entry.macros) {
+        if (matches(macro.name)) {
+          out.push({ name: macro.name, kind: SymbolKind.Function, location: { uri, range: macro.range } });
+        }
+      }
+      for (const block of entry.blocks) {
+        if (matches(block.name)) {
+          out.push({ name: block.name, kind: SymbolKind.Struct, location: { uri, range: block.range } });
+        }
       }
     }
     return out;

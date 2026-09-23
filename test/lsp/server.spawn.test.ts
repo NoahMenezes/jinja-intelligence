@@ -1,5 +1,6 @@
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
@@ -118,6 +119,14 @@ class TestClient {
         }
       }, 25);
     });
+  }
+
+  /** Wait for a `window/logMessage` notification whose message matches. */
+  waitForLog(pattern: RegExp): Promise<RpcMessage> {
+    return this.waitForNotification(
+      "window/logMessage",
+      (m) => typeof (m.params as { message?: unknown }).message === "string" && pattern.test((m.params as { message: string }).message),
+    );
   }
 }
 
@@ -553,6 +562,99 @@ describe("server over stdio", () => {
       expect(shutdown.error).toBeUndefined();
       client.notify("exit", undefined);
       await expect(client.waitForExit()).resolves.toBe(0);
+    },
+    TIMEOUT_MS + 5000,
+  );
+
+  it(
+    "indexes a workspace and completes template names across files",
+    async () => {
+      const dir = mkdtempSync(join(tmpdir(), "jinja-proj-"));
+      try {
+        writeFileSync(join(dir, "base.j2"), "<html>{% block b %}x{% endblock %}</html>");
+        writeFileSync(join(dir, "macros.j2"), "{% macro btn() %}x{% endmacro %}");
+        const client = launch();
+        await client.request("initialize", {
+          ...initParams(),
+          rootUri: `file://${dir}`,
+        });
+        client.notify("initialized", {});
+        // Wait for the background scan to land in the index.
+        await client.waitForLog(/Project indexed: \d+ templates/);
+
+        const childUri = `file://${dir}/child.j2`;
+        client.notify("textDocument/didOpen", {
+          textDocument: { uri: childUri, languageId: "jinja", version: 1, text: '{% extends "" %}' },
+        });
+        await client.waitForNotification(
+          "textDocument/publishDiagnostics",
+          (m) => (m.params as { uri: string }).uri === childUri,
+        );
+
+        // Inside the extends string: index basenames offered.
+        const completed = await client.request("textDocument/completion", {
+          textDocument: { uri: childUri },
+          position: { line: 0, character: 12 },
+        });
+        const names = completionLabels(completed.result);
+        expect(names).toContain("base.j2");
+
+        // Workspace symbols reach macros in unopened files.
+        const searched = await client.request("workspace/symbol", { query: "btn" });
+        const hits = ((searched.result as { name: string; location: { uri: string } }[] | null) ?? []).map(
+          (s) => s.name,
+        );
+        expect(hits).toContain("btn");
+        const btn = ((searched.result as { name: string; location: { uri: string } }[] | null) ?? []).find(
+          (s) => s.name === "btn",
+        );
+        expect(btn?.location.uri).toBe(`file://${dir}/macros.j2`);
+
+        const shutdown = await client.request("shutdown", undefined);
+        expect(shutdown.error).toBeUndefined();
+        client.notify("exit", undefined);
+        await expect(client.waitForExit()).resolves.toBe(0);
+      } finally {
+        rmSync(dir, { recursive: true, force: true });
+      }
+    },
+    TIMEOUT_MS + 5000,
+  );
+
+  it(
+    "falls back to the open file's directory without a workspace",
+    async () => {
+      const dir = mkdtempSync(join(tmpdir(), "jinja-lone-"));
+      try {
+        writeFileSync(join(dir, "sibling.j2"), "x");
+        const client = launch();
+        // No rootUri: the server must index the file's own directory.
+        await client.request("initialize", initParams());
+        client.notify("initialized", {});
+
+        const uri = `file://${dir}/lone.j2`;
+        client.notify("textDocument/didOpen", {
+          textDocument: { uri, languageId: "jinja", version: 1, text: '{% extends "" %}' },
+        });
+        await client.waitForLog(/indexing .* as fallback/);
+        await client.waitForNotification(
+          "textDocument/publishDiagnostics",
+          (m) => (m.params as { uri: string }).uri === uri,
+        );
+
+        const completed = await client.request("textDocument/completion", {
+          textDocument: { uri },
+          position: { line: 0, character: 12 },
+        });
+        expect(completionLabels(completed.result)).toContain("sibling.j2");
+
+        const shutdown = await client.request("shutdown", undefined);
+        expect(shutdown.error).toBeUndefined();
+        client.notify("exit", undefined);
+        await expect(client.waitForExit()).resolves.toBe(0);
+      } finally {
+        rmSync(dir, { recursive: true, force: true });
+      }
     },
     TIMEOUT_MS + 5000,
   );

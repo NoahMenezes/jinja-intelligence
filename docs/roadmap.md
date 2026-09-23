@@ -15,7 +15,7 @@
 - [x] Phase 13 — Template Resolution + Definition
 - [x] Phase 14 — References + Rename
 - [x] Phase 15 — Symbols + Signature Help + Semantic Tokens
-- [ ] Phase 16 — Project Intelligence & Indexing
+- [x] Phase 16 — Project Intelligence & Indexing
 - [ ] Phase 17 — Python Awareness: Basic
 - [ ] Phase 18 — Python Frameworks + Type Intelligence
 - [ ] Phase 19 — Performance & Hardening
