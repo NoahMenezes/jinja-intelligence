@@ -45,6 +45,7 @@ See `docs/development.md` for details.
 - `docs/configuration.md`
 - `docs/supported-features.md`
 - `docs/roadmap.md`
+- `docs/maintainers.md`
 - `docs/performance.md`
 - `docs/installation.md`
 - `CHANGELOG.md`
