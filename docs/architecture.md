@@ -31,11 +31,8 @@ VS Code / Neovim / Zed / Helix / VSCodium
 - Error recovery: broken templates produce partial results, never crash the server.
 - No full-workspace scans per keystroke; prefer caches, indexes, incremental updates, debouncing.
 
-## Current state (Phase 19/20)
+## Current state (1.0.0 — Phase 20/20)
 
-Production hardening done: 44x faster parsing (binary-search offsets,
-compute-once line tables), symlink-safe bounded scanning, `ProjectSync`
-extracted from the server entry, shared token helpers, index pruning,
-fuzz + large + project-shape tests, bench script with recorded budgets in
-`docs/performance.md`. Deliberately uncached: per-request parse/analyze
-(proven sub-ms at scale). Phase 20 packages editor integrations and release.
+Released. The server (`src/`) stays editor-agnostic; the thin VS Code
+client lives in `editors/vscode-extension/` and bundles `dist/server.js`
+at package time. See `docs/installation.md` for every editor.

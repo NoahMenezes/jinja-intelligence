@@ -2,7 +2,7 @@
 
 > Truthful status. Only what exists is marked done.
 
-## Done (Phase 19/20)
+## Done (1.0.0)
 
 - Project tooling: Bun + strict TypeScript + Vitest + build scripts.
 - Core types and utils: Position/Range/TextEdit/URIs, range/string/path helpers.
@@ -36,10 +36,10 @@
 
 Unknown tags (e.g. `{% fro x %}`) intentionally produce no diagnostics.
 
-## Planned (not implemented)
+## Future ideas (not on the roadmap yet)
 
 - Cross-file references/rename
-- Performance hardening
-- Editor integrations (VS Code, Neovim, Zed, Helix)
+- Formatting, inlay hints, code actions
 
-Do not assume any item above works until its phase lands and this file is updated.
+Ideas welcome via feature requests. Do not assume anything here exists
+until it lands and this file is updated.

@@ -1,11 +1,41 @@
 import { createRequire } from "node:module";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 const require = createRequire(import.meta.url);
-const packageJson = require("../package.json") as { readonly version: string };
+
+/**
+ * Server version: walks up from this module to the nearest package.json
+ * named "jinja-intelligence", so the bundled VS Code copy (nested under the
+ * extension manifest) still reports the server version, not the client's.
+ */
+function serverVersion(): string {
+  try {
+    let dir = dirname(fileURLToPath(import.meta.url));
+    for (let i = 0; i < 6; i++) {
+      try {
+        const manifest = require(join(dir, "package.json")) as { name?: unknown; version?: unknown };
+        if (manifest.name === "jinja-intelligence" && typeof manifest.version === "string") {
+          return manifest.version;
+        }
+      } catch {
+        // Keep climbing.
+      }
+      const parent = dirname(dir);
+      if (parent === dir) {
+        break;
+      }
+      dir = parent;
+    }
+  } catch {
+    // Fall through to the placeholder below.
+  }
+  return "0.0.0-dev";
+}
 
 export const SERVER_NAME = "jinja-intelligence";
 /** Single source of truth: always matches package.json. */
-export const SERVER_VERSION: string = packageJson.version;
+export const SERVER_VERSION: string = serverVersion();
 
 export type { DocumentVersion, Position, Range, TextEdit, UriString } from "./types/index.js";
 export * from "./utils/ranges.js";

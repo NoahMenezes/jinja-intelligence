@@ -1,0 +1,62 @@
+name: Publish
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "Where to publish"
+        required: true
+        default: "npm"
+        type: choice
+        options: [npm, marketplace, openvsx, all]
+
+jobs:
+  npm:
+    if: inputs.target == 'npm' || inputs.target == 'all'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+      - run: bun install --frozen-lockfile
+      - run: bun run typecheck
+      - run: bun run test
+      - run: bun run build
+      - run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  extension:
+    if: inputs.target == 'marketplace' || inputs.target == 'openvsx' || inputs.target == 'all'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: editors/vscode-extension
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: bun install --frozen-lockfile
+      - run: bun run typecheck
+      - run: bun run test
+      - run: bun run compile
+      - run: bunx @vscode/vsce publish
+        if: inputs.target == 'marketplace' || inputs.target == 'all'
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_TOKEN }}
+      - run: bunx ovsx publish
+        if: inputs.target == 'openvsx' || inputs.target == 'all'
+        env:
+          OVSX_PAT: ${{ secrets.OVSX_TOKEN }}

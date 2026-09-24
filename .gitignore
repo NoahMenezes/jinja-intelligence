@@ -1,5 +1,7 @@
 node_modules/
 dist/
+out/
 *.tsbuildinfo
 *.log
+*.vsix
 .DS_Store

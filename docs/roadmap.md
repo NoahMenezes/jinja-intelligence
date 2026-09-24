@@ -19,7 +19,7 @@
 - [x] Phase 17 — Python Awareness: Basic
 - [x] Phase 18 — Python Frameworks + Type Intelligence
 - [x] Phase 19 — Performance & Hardening
-- [ ] Phase 20 — Editor Integrations & Release
+- [x] Phase 20 — Editor Integrations & Release (1.0.0)
 
 Each phase must end with `typecheck + tests + build + docs` green and a
 `feat:`/`chore:` commit. The repo stays buildable after every phase.
