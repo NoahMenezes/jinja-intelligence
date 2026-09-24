@@ -49,7 +49,15 @@ See `docs/development.md` for details.
 - `docs/installation.md`
 - `CHANGELOG.md`
 - `CONTRIBUTING.md`
+- `CODE_OF_CONDUCT.md`
+- `SECURITY.md`
 
 ## License
 
 MIT — see `LICENSE`.
+
+## Contributing
+
+Issues and pull requests are welcome — start with [`CONTRIBUTING.md`](CONTRIBUTING.md)
+and our [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md). Report security problems
+privately per [`SECURITY.md`](SECURITY.md).

@@ -1,5 +1,9 @@
 # Contributing
 
+Everyone is welcome here. By participating you agree to our
+[Code of Conduct](CODE_OF_CONDUCT.md). Security issues go through
+[SECURITY.md](SECURITY.md), never public issues.
+
 ## Setup
 
 ```sh
@@ -9,8 +13,27 @@ bun run test
 bun run build
 ```
 
-Requires Bun 1.x and Node 18+. The VS Code extension lives in
-`editors/vscode-extension` with its own install (`bun install` there).
+Requires Bun 1.x and Node 18+ (`.nvmrc` pins Node 22). The VS Code extension lives in
+`editors/vscode-extension` with its own install (`bun install` there) and
+commands (`typecheck`, `test`, `compile`, `package`).
+
+Useful focused commands:
+
+```sh
+bun run test test/hover/        # one area only
+bun run bench                   # performance numbers (see docs/performance.md)
+```
+
+## Before you code
+
+- **Bugs:** use the bug-report template — minimal template, expected vs
+  actual, client, and version (`node dist/server.js --version`).
+- **Features:** open a feature request first for anything beyond a small
+  fix, so scope (single-file vs cross-file, which editors) is agreed
+  before implementation.
+- **Good first issues:** look for the `good first issue` label — docs
+  tables (`src/jinja/docs/`), fixtures, and hover prose are friendly
+  starting points that still ship real value.
 
 ## Development rules
 
@@ -37,3 +60,10 @@ Requires Bun 1.x and Node 18+. The VS Code extension lives in
 - Tests for every behavior change; fixtures for every parser/feature case.
 - Update `docs/supported-features.md` when user-visible behavior changes.
 - Keep commits scoped (`feat:`, `fix:`, `perf:`, `docs:`, `chore:`).
+- No contributor license agreement needed — contributions land under the
+  repo's MIT license.
+
+## Release process (maintainers)
+
+`docs/installation.md` has the checklist: verify, changelog, versions,
+commit, tag, push, then the Publish workflow with registry tokens.

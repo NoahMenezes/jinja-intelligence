@@ -1,0 +1,4 @@
+# Normalize line endings and keep generated content out of diffs.
+* text=auto eol=lf
+*.vsix binary
+bun.lock text
