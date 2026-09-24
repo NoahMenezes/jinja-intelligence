@@ -59,6 +59,26 @@ describe("hover", () => {
     expect(textOf(external!)).toContain("template context");
   });
 
+  it("names the python source file when mapped", () => {
+    const mapped = hover("{{ username }}", 4, {
+      contextSources: new Map([["username", ["file:///app.py"]]]),
+    });
+    expect(mapped).not.toBeNull();
+    expect(textOf(mapped!)).toContain("app.py");
+    expect(textOf(mapped!)).toContain("render_template");
+  });
+
+  it("shows python types with attributes", () => {
+    const typed = hover("{{ user }}", 4, {
+      contextSources: new Map([["user", ["file:///app.py"]]]),
+      contextTypes: { user: { name: "User", attrs: ["name", "email"] } },
+    });
+    expect(typed).not.toBeNull();
+    expect(textOf(typed!)).toContain("user: User");
+    expect(textOf(typed!)).toContain("`name`");
+    expect(textOf(typed!)).toContain("app.py");
+  });
+
   it("returns null where nothing is known", () => {
     expect(hover("plain text", 3)).toBeNull();
     expect(hover('{% extends "base.html" %}', 13)).toBeNull();

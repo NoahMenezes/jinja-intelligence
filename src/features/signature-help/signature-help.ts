@@ -6,6 +6,7 @@ import { findMacro } from "../../jinja/ast/query.js";
 import { FILTER_DOCS } from "../../jinja/docs/filters.js";
 import { lex } from "../../jinja/lexer/lexer.js";
 import type { Token } from "../../jinja/lexer/token-types.js";
+import { previousSignificant } from "../../jinja/lexer/tokens.js";
 import { parseTemplate } from "../../jinja/parser/parser.js";
 
 interface CallSite {
@@ -142,21 +143,4 @@ function countCommas(tokens: readonly Token[], openIndex: number, at: number): n
   return commas;
 }
 
-function previousSignificant(tokens: readonly Token[], beforeIndex: number): Token | null {
-  for (let i = beforeIndex - 1; i >= 0; i--) {
-    const token = tokens[i];
-    if (token === undefined) {
-      break;
-    }
-    if (
-      token.kind !== "EOF" &&
-      !token.kind.endsWith("Open") &&
-      !token.kind.endsWith("Close") &&
-      token.kind !== "CommentText"
-    ) {
-      return token;
-    }
-  }
-  return null;
-}
 

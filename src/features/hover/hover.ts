@@ -10,6 +10,7 @@ import { TEST_DOCS } from "../../jinja/docs/tests.js";
 import type { DocEntry } from "../../jinja/docs/types.js";
 import { lex } from "../../jinja/lexer/lexer.js";
 import type { Token } from "../../jinja/lexer/token-types.js";
+import { previousSignificant } from "../../jinja/lexer/tokens.js";
 import { parseTemplate } from "../../jinja/parser/parser.js";
 
 /**
@@ -17,15 +18,32 @@ import { parseTemplate } from "../../jinja/parser/parser.js";
  * hand-written builtin docs. Unknown positions return null — never fiction.
  * Total, never throws.
  */
-export function hover(text: string, offset: number): Hover | null {
+export function hover(text: string, offset: number, options?: HoverOptions): Hover | null {
   try {
-    return hoverInner(text, Math.min(Math.max(0, offset), text.length));
+    return hoverInner(text, Math.min(Math.max(0, offset), text.length), options);
   } catch {
     return null;
   }
 }
 
-function hoverInner(text: string, at: number): Hover | null {
+export interface HoverOptions {
+  /** Python-provided context for this template: name → source file URIs. */
+  readonly contextSources?: ReadonlyMap<string, readonly string[]>;
+  /** Python-provided types by variable name (Phase 18). */
+  readonly contextTypes?: Readonly<Record<string, { name: string; attrs: readonly string[] }>>;
+}
+
+/** One-line docs for Python builtin types appearing in templates. */
+const PYTHON_TYPE_DOCS: Readonly<Record<string, string>> = {
+  str: "Python string.",
+  int: "Python integer.",
+  bool: "Python boolean.",
+  float: "Python float.",
+  list: "Python list.",
+  dict: "Python dict.",
+};
+
+function hoverInner(text: string, at: number, options?: HoverOptions): Hover | null {
   const tokens = lex(text).tokens;
   const word = tokens.find(
     (t) => (t.kind === "Identifier" || t.kind === "Keyword") && t.start <= at && at <= t.end,
@@ -38,8 +56,8 @@ function hoverInner(text: string, at: number): Hover | null {
     return null;
   }
 
-  const prev = previousSignificant(tokens, word);
-  const prevPrev = prev === null ? null : previousSignificant(tokens, prev);
+  const prev = previousSignificant(tokens, tokens.indexOf(word));
+  const prevPrev = prev === null ? null : previousSignificant(tokens, tokens.indexOf(prev));
 
   // `| name` — but not in a `{% filter %}` header (handled below by head rule).
   if (prev !== null && prev.kind === "Pipe" && !(tag === "block" && isFilterHeader(tokens, word))) {
@@ -87,13 +105,53 @@ function hoverInner(text: string, at: number): Hover | null {
   if (builtin !== undefined) {
     return builtinHover(word, builtin, "builtin");
   }
+  const pythonType = PYTHON_TYPE_DOCS[word.value];
+  if (pythonType !== undefined) {
+    return {
+      contents: {
+        kind: "markdown",
+        value: ["```jinja", word.value, "```", "", pythonType, "", "_builtin · python type_"].join("\n"),
+      },
+      range: word.range,
+    };
+  }
+  const sources = options?.contextSources?.get(word.value) ?? [];
+  const typed = options?.contextTypes?.[word.value];
+  if (typed !== undefined && typed.name !== "unknown") {
+    const shown = typed.attrs.slice(0, 10);
+    const lines = ["```jinja", `${word.value}: ${typed.name}`, "```", ""];
+    if (shown.length > 0) {
+      lines.push(...shown.map((a) => `- \`${a}\``));
+      if (typed.attrs.length > shown.length) {
+        lines.push(`- …and ${typed.attrs.length - shown.length} more`);
+      }
+      lines.push("");
+    }
+    lines.push(
+      sources.length > 0
+        ? `Provided by ${sources.map((s) => `\`${basenameOf(s)}\``).join(", ")} via \`render_template\`.`
+        : "Provided by the template context.",
+    );
+    lines.push("", "_external · typed_");
+    return { contents: { kind: "markdown", value: lines.join("\n") }, range: word.range };
+  }
+  const provenance =
+    sources.length > 0
+      ? `Provided by ${sources.map((s) => `\`${basenameOf(s)}\``).join(", ")} via \`render_template\`.`
+      : "Provided by the template context.";
   return {
     contents: {
       kind: "markdown",
-      value: ["```jinja", word.value, "```", "", "Provided by the template context.", "", "_external · type unknown_"].join("\n"),
+      value: ["```jinja", word.value, "```", "", provenance, "", "_external · type unknown_"].join("\n"),
     },
     range: word.range,
   };
+}
+
+/** File basename for provenance lines (`app.py`, not a full URI). */
+function basenameOf(uri: string): string {
+  const slash = uri.lastIndexOf("/");
+  return slash === -1 ? uri : uri.slice(slash + 1);
 }
 
 type TagKind = "variable" | "block" | "comment";
@@ -121,23 +179,6 @@ function enclosingTag(tokens: readonly Token[], at: number): TagKind | null {
   return open;
 }
 
-function previousSignificant(tokens: readonly Token[], before: Token): Token | null {
-  let prev: Token | null = null;
-  for (const token of tokens) {
-    if (token.start >= before.start) {
-      break;
-    }
-    if (
-      token.kind !== "EOF" &&
-      !token.kind.endsWith("Open") &&
-      !token.kind.endsWith("Close") &&
-      token.kind !== "CommentText"
-    ) {
-      prev = token;
-    }
-  }
-  return prev;
-}
 
 /** True when the word is the filter name of a `{% filter name %}` header. */
 function isFilterHeader(tokens: readonly Token[], word: Token): boolean {

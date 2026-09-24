@@ -31,11 +31,11 @@ VS Code / Neovim / Zed / Helix / VSCodium
 - Error recovery: broken templates produce partial results, never crash the server.
 - No full-workspace scans per keystroke; prefer caches, indexes, incremental updates, debouncing.
 
-## Current state (Phase 16/20)
+## Current state (Phase 19/20)
 
-Project intelligence (`src/project/`) done: async bounded scanner (skip
-dirs, file cap, marker-gated `.html`), template index (macros, blocks,
-inheritance edges, basenames), open-documents-shadow-disk freshness with
-debounced external updates. Live consumers: template-name completion in
-strings and index-wide workspace symbols. Cross-file references/rename and
-Python context are later phases. Phase 17 introduces basic Python awareness.
+Production hardening done: 44x faster parsing (binary-search offsets,
+compute-once line tables), symlink-safe bounded scanning, `ProjectSync`
+extracted from the server entry, shared token helpers, index pruning,
+fuzz + large + project-shape tests, bench script with recorded budgets in
+`docs/performance.md`. Deliberately uncached: per-request parse/analyze
+(proven sub-ms at scale). Phase 20 packages editor integrations and release.

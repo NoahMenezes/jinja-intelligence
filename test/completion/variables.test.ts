@@ -57,6 +57,34 @@ describe("variable completion", () => {
     const at = "{{ products }} {{ }}".length - 3;
     expect(itemAt("{{ products }} {{ }}", at, "products")).toMatchObject({ detail: "context" });
   });
+
+  it("prefers python-provided names over file guesses", () => {
+    const text = "{{ user }} {{ }}";
+    const at = text.length - 3;
+    const items = complete(text, at, { contextNames: ["user", "admin"] });
+    const user = items.find((i) => i.label === "user");
+    expect(user).toMatchObject({ detail: "context" });
+    // No duplicate: the file-guessed `user` collapses into the python one.
+    expect(items.filter((i) => i.label === "user").length).toBe(1);
+    expect(items.some((i) => i.label === "admin")).toBe(true);
+  });
+
+  it("annotates details with python types", () => {
+    const items = complete("{{ }}", 3, {
+      contextNames: ["user"],
+      contextTypes: { user: { name: "User", attrs: ["name"] } },
+    });
+    expect(items.find((i) => i.label === "user")).toMatchObject({ detail: "context · User" });
+  });
+
+  it("completes typed properties and skips unknown bases", () => {
+    const types = { user: { name: "User", attrs: ["name", "email"] } };
+    const found = complete("{{ user. }}", 8, { contextTypes: types });
+    expect(found.map((i) => i.label).sort()).toEqual(["email", "name"]);
+    expect(complete("{{ other. }}", 9, { contextTypes: types })).toEqual([]);
+    // Local bindings shadow context types.
+    expect(complete("{% for user in us %}{{ user. }}{% endfor %}", 30, { contextTypes: types })).toEqual([]);
+  });
 });
 
 describe("property completion", () => {

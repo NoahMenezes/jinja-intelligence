@@ -32,9 +32,16 @@ function scopeKindOf(kind: SymbolKind): CompletionItem["kind"] {
 
 /**
  * Scope-aware variable completion: innermost bindings first, then builtins,
- * then names seen in the file context. Total, never throws.
+ * then template context. Python-provided names outrank file-guessed
+ * externals; both carry `detail: "context"` with provenance intact.
+ * Total, never throws.
  */
-export function buildVariableItems(analysis: Analysis, offset: number): CompletionItem[] {
+export function buildVariableItems(
+  analysis: Analysis,
+  offset: number,
+  pythonNames?: readonly string[],
+  typeNames?: Readonly<Record<string, string>>,
+): CompletionItem[] {
   try {
     const items: CompletionItem[] = [];
     const seen = new Set<string>();
@@ -61,6 +68,19 @@ export function buildVariableItems(analysis: Analysis, offset: number): Completi
       items.push(item);
       seen.add(item.label);
     }
+    for (const name of pythonNames ?? []) {
+      if (seen.has(name)) {
+        continue;
+      }
+      seen.add(name);
+      const typeName = typeNames?.[name];
+      items.push({
+        label: name,
+        kind: CompletionItemKind.Variable,
+        detail: typeName === undefined || typeName === "unknown" ? "context" : `context · ${typeName}`,
+        sortText: `2${name}`,
+      });
+    }
     for (const name of analysis.externals) {
       if (seen.has(name)) {
         continue;
@@ -75,19 +95,33 @@ export function buildVariableItems(analysis: Analysis, offset: number): Completi
 }
 
 /**
- * Property completion. Only the implicit `loop` variable has known
- * attributes today; every other base yields no items (type-driven
- * properties arrive with Python type intelligence).
+ * Property completion: the implicit `loop` variable first, then type-driven
+ * attributes for Python-typed bases. Unknown bases yield nothing (never
+ * fiction). Total, never throws.
  */
-export function buildPropertyItems(analysis: Analysis, baseName: string, baseOffset: number): CompletionItem[] {
+export function buildPropertyItems(
+  analysis: Analysis,
+  baseName: string,
+  baseOffset: number,
+  typeAttrs?: readonly string[],
+): CompletionItem[] {
   try {
     const resolved = resolveAt(analysis, baseOffset);
-    if (resolved === null || resolved.name !== baseName || resolved.name !== "loop" || resolved.kind !== "Loop") {
+    if (resolved !== null && resolved.name === baseName && resolved.name === "loop" && resolved.kind === "Loop") {
+      return [...LOOP_ATTRIBUTES]
+        .sort()
+        .map((label) => ({ label, kind: CompletionItemKind.Field, detail: "loop attribute", sortText: label }));
+    }
+    if (resolved !== null && resolved.name === baseName) {
+      // Locally bound: shadowing context names carry no type info yet.
       return [];
     }
-    return [...LOOP_ATTRIBUTES]
-      .sort()
-      .map((label) => ({ label, kind: CompletionItemKind.Field, detail: "loop attribute", sortText: label }));
+    if (typeAttrs !== undefined && typeAttrs.length > 0) {
+      return [...typeAttrs]
+        .sort()
+        .map((label) => ({ label, kind: CompletionItemKind.Field, detail: `${baseName} attribute`, sortText: label }));
+    }
+    return [];
   } catch {
     return [];
   }

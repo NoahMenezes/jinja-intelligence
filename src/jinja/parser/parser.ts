@@ -27,7 +27,7 @@ export function parseTemplate(text: string): ParseResult<TemplateNode> {
       last !== undefined && last.kind === "EOF"
         ? last
         : { kind: "EOF", value: "", start: text.length, end: text.length, range: { start: posOf(text.length), end: posOf(text.length) } };
-    const state: BodyState = { text, tokens: lexed.tokens, errors, eof, pos: 0 };
+    const state: BodyState = { text, tokens: lexed.tokens, errors, eof, lineStarts, pos: 0 };
     const root = parseTemplateBody(state);
     return { root, errors };
   } catch {

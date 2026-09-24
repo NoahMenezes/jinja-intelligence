@@ -65,4 +65,41 @@ describe("project", () => {
     await app.refreshPath("/tmp/fake-proj/ghost.j2");
     expect(app.index.get(ghost)).toBeNull();
   });
+
+  it("routes python files to the python index, not templates", async () => {
+    const app = project();
+    await app.scan();
+    expect(app.python.size()).toBe(1);
+    const uri = `file://${FIXTURES}/app.py`;
+    // Open-document shadowing with richer content.
+    app.upsert(uri, 'render_template("users.j2", user=user)\nrender_template("x.html")');
+    expect(app.index.get(uri)).toBeNull();
+    const context = app.templateContext(`file://${FIXTURES}/templates/users.j2`);
+    expect(context?.vars).toEqual(["user"]);
+    expect(context?.sources).toEqual([uri]);
+    await app.revertToDisk(uri);
+    expect(app.templateContext(`file://${FIXTURES}/templates/users.j2`)?.vars).toEqual([]);
+  });
+
+  it("prunes files deleted without watcher events", async () => {
+    const app = project();
+    await app.scan();
+    const ghost = "file:///tmp/fake-proj/gone.j2";
+    app.upsert(ghost, "x");
+    expect(app.index.get(ghost)).not.toBeNull();
+    expect(await app.prune()).toBe(1);
+    expect(app.index.get(ghost)).toBeNull();
+    // Second prune is a clean no-op.
+    expect(await app.prune()).toBe(0);
+  });
+
+  it("indexes a django-shaped project with dict contexts", async () => {
+    const root = fileURLToPath(new URL("../fixtures/project/django", import.meta.url));
+    const django = new Project({ roots: [`file://${root}`], extensions: [".j2", ".jinja"], templateDirs: [] }, NODE_FS);
+    const stats = await django.scan();
+    expect(stats.capped).toBe(false);
+    const context = django.templateContext(`file://${root}/templates/profile.html`);
+    expect(context?.vars).toEqual(["user"]);
+    expect(context?.sources).toEqual([`file://${root}/views.py`]);
+  });
 });

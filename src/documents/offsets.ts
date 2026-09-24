@@ -67,15 +67,22 @@ export function positionAtOffset(
   offset: number,
 ): Position {
   const clamped = clamp(offset, 0, text.length);
-  let line = 0;
-  for (let i = 0; i < lineStarts.length; i++) {
-    const start = lineStarts[i];
-    if (start !== undefined && start <= clamped) {
-      line = i;
+  if (lineStarts.length === 0) {
+    return { line: 0, character: clamped };
+  }
+  // Binary search: lineStarts is strictly ascending, so this finds the
+  // greatest line start <= clamped in O(log n). Same result as the old
+  // linear scan (verified by round-trip property tests).
+  let low = 0;
+  let high = lineStarts.length - 1;
+  while (low < high) {
+    const mid = low + ((high - low + 1) >> 1);
+    if ((lineStarts[mid] ?? Number.POSITIVE_INFINITY) <= clamped) {
+      low = mid;
     } else {
-      break;
+      high = mid - 1;
     }
   }
-  const lineStart = lineStarts[line] ?? 0;
-  return { line, character: clamped - lineStart };
+  const lineStart = lineStarts[low] ?? 0;
+  return { line: low, character: clamped - lineStart };
 }

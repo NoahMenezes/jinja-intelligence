@@ -1,4 +1,4 @@
-import { computeLineStarts, positionAtOffset } from "../../documents/offsets.js";
+import { positionAtOffset } from "../../documents/offsets.js";
 import type {
   CallArgument,
   Expression,
@@ -25,6 +25,8 @@ export interface BodyState {
   readonly tokens: readonly Token[];
   readonly errors: ParseError[];
   readonly eof: Token;
+  /** Line table computed once per parse (never recomputed per node). */
+  readonly lineStarts: readonly number[];
   pos: number;
 }
 
@@ -60,13 +62,12 @@ const IF_STOPS: ReadonlySet<string> = new Set(["elif", "else", "endif"]);
 const FOR_STOPS: ReadonlySet<string> = new Set(["else", "endfor"]);
 
 function spanOf(state: BodyState, start: number, end: number): Ranged {
-  const lineStarts = computeLineStarts(state.text);
   return {
     start,
     end,
     range: {
-      start: positionAtOffset(lineStarts, state.text, start),
-      end: positionAtOffset(lineStarts, state.text, end),
+      start: positionAtOffset(state.lineStarts, state.text, start),
+      end: positionAtOffset(state.lineStarts, state.text, end),
     },
   };
 }
@@ -996,15 +997,14 @@ function parseRaw(state: BodyState, tag: TagInfo): TemplateChild {
   const contentEnd = closeStart ?? state.text.length;
   const body: TextNode[] = [];
   if (contentEnd > contentStart) {
-    const lineStarts = computeLineStarts(state.text);
     body.push({
       kind: "Text",
       value: state.text.slice(contentStart, contentEnd),
       start: contentStart,
       end: contentEnd,
       range: {
-        start: positionAtOffset(lineStarts, state.text, contentStart),
-        end: positionAtOffset(lineStarts, state.text, contentEnd),
+        start: positionAtOffset(state.lineStarts, state.text, contentStart),
+        end: positionAtOffset(state.lineStarts, state.text, contentEnd),
       },
     });
   }

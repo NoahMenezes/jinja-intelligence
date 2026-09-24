@@ -2,11 +2,15 @@
 export interface ScanFs {
   readdir(path: string): Promise<readonly string[]>;
   stat(path: string): Promise<{ isDirectory(): boolean; isFile(): boolean }>;
+  /** Canonical path for cycle detection; defaults to identity when absent. */
+  realpath?(path: string): Promise<string>;
 }
 
 export interface ScanOptions {
   /** Template extensions, lowercase with dot (e.g. ".j2"). */
   readonly extensions: readonly string[];
+  /** Python extensions collected for context extraction (e.g. [".py"]). */
+  readonly pythonExtensions: readonly string[];
   /** Directory basenames to skip. */
   readonly skipDirs: readonly string[];
   /** Hard cap on collected files. */
@@ -27,8 +31,10 @@ export const DEFAULT_SKIP_DIRS: readonly string[] = [
 export const MAX_INDEX_FILES = 2000;
 
 export interface ScanResult {
-  /** Absolute file paths collected, in walk order. */
+  /** Absolute template-candidate paths, in walk order. */
   readonly files: readonly string[];
+  /** Absolute Python-candidate paths, in walk order. */
+  readonly python: readonly string[];
   /** True when the walk stopped early at the cap. */
   readonly capped: boolean;
   /** Directories skipped for unreadability (diagnostic aid). */
@@ -46,16 +52,40 @@ export async function walkRoots(
   fs: ScanFs,
 ): Promise<ScanResult> {
   const files: string[] = [];
+  const python: string[] = [];
   const skipped: string[] = [];
   let capped = false;
   const extensions = new Set(options.extensions.map((e) => e.toLowerCase()));
+  const pythonExtensions = new Set(options.pythonExtensions.map((e) => e.toLowerCase()));
   const skipDirs = new Set(options.skipDirs);
+  /** Canonicalized directories already walked: symlink cycles terminate here. */
+  const visited = new Set<string>();
+
+  function count(): number {
+    return files.length + python.length;
+  }
+
+  async function canonical(dir: string): Promise<string> {
+    try {
+      if (fs.realpath !== undefined) {
+        return await fs.realpath(dir);
+      }
+    } catch {
+      // Fall through to the raw path.
+    }
+    return dir;
+  }
 
   async function walk(dir: string): Promise<void> {
-    if (files.length >= options.maxFiles) {
+    if (count() >= options.maxFiles) {
       capped = true;
       return;
     }
+    const id = await canonical(dir);
+    if (visited.has(id)) {
+      return;
+    }
+    visited.add(id);
     let entries: readonly string[];
     try {
       entries = await fs.readdir(dir);
@@ -65,7 +95,7 @@ export async function walkRoots(
     }
     const sorted = [...entries].sort();
     for (const entry of sorted) {
-      if (files.length >= options.maxFiles) {
+      if (count() >= options.maxFiles) {
         capped = true;
         return;
       }
@@ -89,10 +119,12 @@ export async function walkRoots(
         const ext = dot === -1 ? "" : entry.slice(dot).toLowerCase();
         if (extensions.has(ext) || ext === ".html") {
           files.push(full);
-          if (files.length >= options.maxFiles) {
-            capped = true;
-            return;
-          }
+        } else if (pythonExtensions.has(ext)) {
+          python.push(full);
+        }
+        if (count() >= options.maxFiles) {
+          capped = true;
+          return;
         }
       }
     }
@@ -104,5 +136,5 @@ export async function walkRoots(
       break;
     }
   }
-  return { files, capped, skipped };
+  return { files, python, capped, skipped };
 }

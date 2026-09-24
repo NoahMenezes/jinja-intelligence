@@ -6,6 +6,7 @@ import type { Symbol } from "../../jinja/analysis/symbols.js";
 import type { Range } from "../../types/index.js";
 import { lex } from "../../jinja/lexer/lexer.js";
 import type { Token } from "../../jinja/lexer/token-types.js";
+import { previousSignificant } from "../../jinja/lexer/tokens.js";
 import { parseTemplate } from "../../jinja/parser/parser.js";
 import { declarationRanges } from "./bindings.js";
 import { compareRanges } from "./bindings.js";
@@ -67,27 +68,10 @@ export function symbolAt(text: string, analysis: Analysis, at: number): Symbol |
   }
   // Property segments (`name` in `user.name`) are not references, even when
   // an unrelated same-named variable exists in scope.
-  if (previousSignificant(tokens, word)?.kind === "Dot") {
+  if (previousSignificant(tokens, tokens.indexOf(word))?.kind === "Dot") {
     return null;
   }
   const fallback = lookup(scopeAt(analysis.root, at), word.value);
   return fallback !== null && fallback.name === word.value ? fallback : null;
 }
 
-function previousSignificant(tokens: readonly Token[], before: { start: number }): Token | null {
-  let prev: Token | null = null;
-  for (const token of tokens) {
-    if (token.start >= before.start) {
-      break;
-    }
-    if (
-      token.kind !== "EOF" &&
-      !token.kind.endsWith("Open") &&
-      !token.kind.endsWith("Close") &&
-      token.kind !== "CommentText"
-    ) {
-      prev = token;
-    }
-  }
-  return prev;
-}

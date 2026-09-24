@@ -16,9 +16,9 @@
 - [x] Phase 14 — References + Rename
 - [x] Phase 15 — Symbols + Signature Help + Semantic Tokens
 - [x] Phase 16 — Project Intelligence & Indexing
-- [ ] Phase 17 — Python Awareness: Basic
-- [ ] Phase 18 — Python Frameworks + Type Intelligence
-- [ ] Phase 19 — Performance & Hardening
+- [x] Phase 17 — Python Awareness: Basic
+- [x] Phase 18 — Python Frameworks + Type Intelligence
+- [x] Phase 19 — Performance & Hardening
 - [ ] Phase 20 — Editor Integrations & Release
 
 Each phase must end with `typecheck + tests + build + docs` green and a

@@ -6,6 +6,7 @@ import type { FromNode, ImportNode, TemplateNode } from "../../jinja/ast/nodes.j
 import { findMacro, templateReferences, unquote, walkStatements } from "../../jinja/ast/query.js";
 import { lex } from "../../jinja/lexer/lexer.js";
 import type { Token } from "../../jinja/lexer/token-types.js";
+import { previousSignificant } from "../../jinja/lexer/tokens.js";
 import { parseTemplate } from "../../jinja/parser/parser.js";
 import { resolveTemplate } from "../../templates/resolver.js";
 
@@ -69,7 +70,7 @@ function symbolDefinition(
     return null;
   }
   // Property segments (`input` in `forms.input`) resolve through their base.
-  const prev = previousSignificant(tokens, word);
+  const prev = previousSignificant(tokens, tokens.indexOf(word));
   if (prev !== null && prev.kind === "Dot") {
     return segmentDefinition(root, tokens, word, prev, uri, ctx);
   }
@@ -293,23 +294,6 @@ function defaultReadFile(targetUri: string): string | null {
   }
 }
 
-function previousSignificant(tokens: readonly Token[], before: Token): Token | null {
-  let prev: Token | null = null;
-  for (const token of tokens) {
-    if (token.start >= before.start) {
-      break;
-    }
-    if (
-      token.kind !== "EOF" &&
-      !token.kind.endsWith("Open") &&
-      !token.kind.endsWith("Close") &&
-      token.kind !== "CommentText"
-    ) {
-      prev = token;
-    }
-  }
-  return prev;
-}
 
 function zero(): Location["range"] {
   return { start: { line: 0, character: 0 }, end: { line: 0, character: 0 } };

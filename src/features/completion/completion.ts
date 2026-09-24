@@ -19,6 +19,10 @@ export type CompletionContext =
 export interface CompletionOptions {
   /** Template basenames from the project index (Phase 16). */
   readonly templateNames?: readonly string[];
+  /** Python-provided context names for this template (Phase 17). */
+  readonly contextNames?: readonly string[];
+  /** Python-provided types by variable name (Phase 18). */
+  readonly contextTypes?: Readonly<Record<string, { name: string; attrs: readonly string[] }>>;
 }
 
 /**
@@ -38,13 +42,13 @@ export function complete(text: string, offset: number, options?: CompletionOptio
       case "test":
         return buildTestItems();
       case "variable":
-        return buildVariableItems(analyze(text), at);
+        return buildVariableItems(analyze(text), at, options?.contextNames, typeNamesOf(options?.contextTypes));
       case "property": {
         const base = propertyBase(text, at);
         if (base === null) {
           return [];
         }
-        return buildPropertyItems(analyze(text), base.name, base.offset);
+        return buildPropertyItems(analyze(text), base.name, base.offset, options?.contextTypes?.[base.name]?.attrs);
       }
       case "template":
         return buildTemplateItems(options?.templateNames ?? []);
@@ -58,6 +62,20 @@ export function complete(text: string, offset: number, options?: CompletionOptio
 
 function analyze(text: string) {
   return analyzeTemplate(parseTemplate(text).root);
+}
+
+/** Type display names by variable name for detail lines. */
+function typeNamesOf(
+  types: Readonly<Record<string, { name: string; attrs: readonly string[] }>> | undefined,
+): Readonly<Record<string, string>> | undefined {
+  if (types === undefined) {
+    return undefined;
+  }
+  const out: Record<string, string> = {};
+  for (const [name, info] of Object.entries(types)) {
+    out[name] = info.name;
+  }
+  return out;
 }
 
 /** True when the offset sits inside a template-path string literal. */

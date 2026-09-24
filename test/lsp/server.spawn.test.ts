@@ -658,6 +658,106 @@ describe("server over stdio", () => {
     },
     TIMEOUT_MS + 5000,
   );
+
+  it(
+    "serves python template context over stdio",
+    async () => {
+      const dir = mkdtempSync(join(tmpdir(), "jinja-flask-"));
+      try {
+        writeFileSync(
+          join(dir, "app.py"),
+          'from flask import render_template\n\n\ndef home():\n    return render_template(\n        "index.html",\n        user=user,\n    )\n',
+        );
+        const client = launch();
+        await client.request("initialize", { ...initParams(), rootUri: `file://${dir}` });
+        client.notify("initialized", {});
+        await client.waitForLog(/Project indexed: \d+ templates/);
+
+        const uri = `file://${dir}/index.html`;
+        client.notify("textDocument/didOpen", {
+          textDocument: { uri, languageId: "jinja", version: 1, text: "{{ }} {{ user }}" },
+        });
+        await client.waitForNotification(
+          "textDocument/publishDiagnostics",
+          (m) => (m.params as { uri: string }).uri === uri,
+        );
+
+        const completed = await client.request("textDocument/completion", {
+          textDocument: { uri },
+          position: { line: 0, character: 3 },
+        });
+        const items = (
+          (completed.result as { label: string; detail?: string }[] | null) ?? []
+        ).filter((i) => i.label === "user");
+        expect(items.length).toBe(1);
+        expect(items[0]?.detail).toBe("context");
+
+        const hovered = await client.request("textDocument/hover", {
+          textDocument: { uri },
+          // Over `user` in `{{ user }}`.
+          position: { line: 0, character: 11 },
+        });
+        expect(hoverText(hovered.result)).toContain("app.py");
+
+        const shutdown = await client.request("shutdown", undefined);
+        expect(shutdown.error).toBeUndefined();
+        client.notify("exit", undefined);
+        await expect(client.waitForExit()).resolves.toBe(0);
+      } finally {
+        rmSync(dir, { recursive: true, force: true });
+      }
+    },
+    TIMEOUT_MS + 5000,
+  );
+
+  it(
+    "serves python types over stdio",
+    async () => {
+      const dir = mkdtempSync(join(tmpdir(), "jinja-typed-"));
+      try {
+        writeFileSync(
+          join(dir, "app.py"),
+          "from dataclasses import dataclass\n\n\n@dataclass\nclass User:\n    name: str\n    email: str\n\n\ndef get_user() -> User:\n    return User(name='a', email='b')\n\n\ndef home():\n    return render_template('u.html', user=get_user())\n",
+        );
+        const client = launch();
+        await client.request("initialize", { ...initParams(), rootUri: `file://${dir}` });
+        client.notify("initialized", {});
+        await client.waitForLog(/Project indexed: \d+ templates/);
+
+        const uri = `file://${dir}/u.html`;
+        client.notify("textDocument/didOpen", {
+          textDocument: { uri, languageId: "jinja", version: 1, text: "{{ user. }}" },
+        });
+        await client.waitForNotification(
+          "textDocument/publishDiagnostics",
+          (m) => (m.params as { uri: string }).uri === uri,
+        );
+
+        const completed = await client.request("textDocument/completion", {
+          textDocument: { uri },
+          position: { line: 0, character: 8 },
+        });
+        const names = completionLabels(completed.result);
+        expect(names).toContain("name");
+        expect(names).toContain("email");
+
+        const hovered = await client.request("textDocument/hover", {
+          textDocument: { uri },
+          // Over `user`.
+          position: { line: 0, character: 4 },
+        });
+        expect(hoverText(hovered.result)).toContain("user: User");
+
+        const shutdown = await client.request("shutdown", undefined);
+        expect(shutdown.error).toBeUndefined();
+        client.notify("exit", undefined);
+        await expect(client.waitForExit()).resolves.toBe(0);
+      } finally {
+        rmSync(dir, { recursive: true, force: true });
+      }
+    },
+    TIMEOUT_MS + 5000,
+  );
 });
 
 /** Extract Markdown hover text, tolerating a null result. */

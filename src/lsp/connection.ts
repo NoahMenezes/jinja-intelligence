@@ -1,5 +1,3 @@
-import * as nodeFs from "node:fs";
-import * as nodePath from "node:path";
 import {
   FileChangeType,
   ProposedFeatures,
@@ -33,11 +31,10 @@ import { rename } from "../features/rename/rename.js";
 import { signatureHelp } from "../features/signature-help/signature-help.js";
 import { documentSymbols, indexWorkspaceSymbols, workspaceSymbols } from "../features/symbols/symbols.js";
 import { semanticTokens } from "../features/semantic-tokens/semantic-tokens.js";
-import { Project, type ProjectFs } from "../project/project.js";
-import { toFileUri, toFsPath } from "../utils/paths.js";
 import { rootsFromInitialize } from "../project/workspace.js";
 import { DocumentSync } from "./document-sync.js";
 import { createInitializeResult, Lifecycle } from "./lifecycle.js";
+import { ProjectSync } from "./project-sync.js";
 
 export interface Server {
   readonly connection: Connection;
@@ -58,48 +55,7 @@ export function createServer(): Server {
   const lifecycle = new Lifecycle();
   const sync = new DocumentSync(logger);
   const documents = new TextDocuments(TextDocument);
-  let roots: string[] = [];
-  let templateDirs: string[] = [];
-  let extensions: string[] = [];
-  let project: Project | null = null;
-  let watchSupported = false;
-
-  const NODE_FS: ProjectFs = {
-    readdir: (path: string) => nodeFs.promises.readdir(path),
-    stat: (path: string) => nodeFs.promises.stat(path),
-    readFile: async (path: string) => {
-      try {
-        return await nodeFs.promises.readFile(path, "utf8");
-      } catch {
-        return null;
-      }
-    },
-    statFile: async (path: string) => {
-      try {
-        const st = await nodeFs.promises.stat(path);
-        return { mtimeMs: st.mtimeMs };
-      } catch {
-        return null;
-      }
-    },
-  };
-
-  /** (Re)build the project shell; the scan itself runs in the background. */
-  function rebuildProject(): void {
-    try {
-      project = new Project({ roots, extensions, templateDirs }, NODE_FS);
-    } catch (error) {
-      logger.error(`project rebuild failed: ${String(error)}`);
-      project = null;
-    }
-  }
-
-  /** Background scan with the currently open documents applied on top. */
-  function scanInBackground(): void {
-    const current = project;
-    if (current === null) {
-      return;
-    }
+  const projects = new ProjectSync(logger, () => {
     const open = new Map<string, string>();
     for (const uri of sync.manager.uris()) {
       const document = sync.manager.get(uri);
@@ -107,91 +63,8 @@ export function createServer(): Server {
         open.set(uri, document.text);
       }
     }
-    void current
-      .scan(open)
-      .then((stats) => {
-        logger.info(
-          `Project indexed: ${stats.files} templates${stats.capped ? " (capped)" : ""}${stats.skipped.length > 0 ? `, ${stats.skipped.length} skipped` : ""}.`,
-        );
-      })
-      .catch((error: unknown) => {
-        logger.error(`project scan failed: ${String(error)}`);
-      });
-  }
-
-  // Set once: when no workspace arrives, the first opened file's directory
-  // becomes the fallback root so single files work with zero configuration.
-  let fallbackApplied = false;
-
-  function applyFallbackRoot(uri: string): void {
-    if (fallbackApplied || roots.length > 0) {
-      return;
-    }
-    try {
-      const fsPath = toFsPath(uri);
-      if (fsPath === null) {
-        return;
-      }
-      const dirUri = toFileUri(nodePath.dirname(fsPath));
-      if (dirUri === null) {
-        return;
-      }
-      fallbackApplied = true;
-      roots = [dirUri];
-      rebuildProject();
-      scanInBackground();
-      logger.info(`No workspace root received; indexing ${dirUri} as fallback.`);
-    } catch (error) {
-      logger.error(`fallback root failed: ${String(error)}`);
-    }
-  }
-
-  // Trailing-edge debounce for external file-event bursts (git checkouts etc).
-  let watchTimer: ReturnType<typeof setTimeout> | null = null;
-  const pendingRefresh = new Set<string>();
-  const pendingRemovals = new Set<string>();
-
-  function flushWatched(): void {
-    watchTimer = null;
-    const current = project;
-    if (current === null) {
-      pendingRefresh.clear();
-      pendingRemovals.clear();
-      return;
-    }
-    for (const uri of pendingRemovals) {
-      try {
-        current.index.remove(uri);
-      } catch (error) {
-        logger.error(`index removal failed: ${String(error)}`);
-      }
-    }
-    pendingRemovals.clear();
-    const paths = [...pendingRefresh];
-    pendingRefresh.clear();
-    void (async () => {
-      for (const fsPath of paths) {
-        await current.refreshPath(fsPath);
-      }
-    })().catch((error: unknown) => {
-      logger.error(`index refresh failed: ${String(error)}`);
-    });
-  }
-
-  function scheduleWatched(uri: string, deleted: boolean): void {
-    if (deleted) {
-      pendingRemovals.add(uri);
-    } else {
-      const fsPath = toFsPath(uri);
-      if (fsPath !== null) {
-        pendingRefresh.add(fsPath);
-      }
-    }
-    if (watchTimer !== null) {
-      clearTimeout(watchTimer);
-    }
-    watchTimer = setTimeout(flushWatched, 500);
-  }
+    return open;
+  });
 
   connection.onInitialize((params: InitializeParams): InitializeResult => {
     try {
@@ -200,19 +73,19 @@ export function createServer(): Server {
           | Record<string, unknown>
           | undefined,
       );
-      roots = rootsFromInitialize(params);
-      templateDirs = [...settings.templateDirectories];
-      extensions = [...settings.templateExtensions];
-      rebuildProject();
+      const roots = rootsFromInitialize(params);
+      projects.configure(roots, [...settings.templateDirectories], [...settings.templateExtensions]);
       try {
         const workspace = params.capabilities as
           | { workspace?: { didChangeWatchedFiles?: { dynamicRegistration?: boolean } } }
           | undefined;
-        watchSupported = workspace?.workspace?.didChangeWatchedFiles?.dynamicRegistration === true;
+        projects.setWatchSupported(
+          workspace?.workspace?.didChangeWatchedFiles?.dynamicRegistration === true,
+        );
       } catch {
-        watchSupported = false;
+        projects.setWatchSupported(false);
       }
-      logger.info(`Initializing ${SERVER_NAME} ${SERVER_VERSION} (sync=${TextDocumentSyncKind.Full}, roots=${JSON.stringify(roots)}, settings=${JSON.stringify(settings)})`);
+      logger.info(`Initializing ${SERVER_NAME} ${SERVER_VERSION} (sync=${TextDocumentSyncKind.Full}, roots=${JSON.stringify(projects.getRoots())}, settings=${JSON.stringify(settings)})`);
       return createInitializeResult(SERVER_NAME, SERVER_VERSION);
     } catch (error) {
       logger.error(`initialize failed: ${String(error)}`);
@@ -223,8 +96,8 @@ export function createServer(): Server {
   connection.onInitialized((): void => {
     try {
       logger.info(`${SERVER_NAME} initialized.`);
-      scanInBackground();
-      void registerWatchers().catch((error: unknown) => {
+      projects.scan();
+      void projects.registerWatchers(connection).catch((error: unknown) => {
         logger.error(`watch registration failed: ${String(error)}`);
       });
     } catch (error) {
@@ -232,31 +105,12 @@ export function createServer(): Server {
     }
   });
 
-  /** Register file watching when the client supports it; silent otherwise. */
-  async function registerWatchers(): Promise<void> {
-    if (!watchSupported) {
-      return;
-    }
-    await connection.sendRequest("client/registerCapability", {
-      registrations: [
-        {
-          id: "jinja-templates",
-          method: "workspace/didChangeWatchedFiles",
-          registerOptions: { watchers: [{ globPattern: "**/*.{j2,jinja,jinja2,html}" }] },
-        },
-      ],
-    });
-    logger.info("Watching template files for external changes.");
-  }
-
   connection.onDidChangeConfiguration((change): void => {
     try {
       const raw = (change.settings as Record<string, unknown> | undefined)?.["jinjaIntelligence"];
       const settings = resolveSettings(raw as Record<string, unknown> | undefined);
-      templateDirs = [...settings.templateDirectories];
-      extensions = [...settings.templateExtensions];
-      rebuildProject();
-      scanInBackground();
+      projects.configure(projects.getRoots(), [...settings.templateDirectories], [...settings.templateExtensions]);
+      projects.scan();
       logger.info("Configuration updated.");
     } catch (error) {
       logger.error(`configuration handler failed: ${String(error)}`);
@@ -266,7 +120,7 @@ export function createServer(): Server {
   connection.onDidChangeWatchedFiles((params): void => {
     try {
       for (const change of params.changes) {
-        scheduleWatched(change.uri, change.type === FileChangeType.Deleted);
+        projects.watched(change.uri, change.type === FileChangeType.Deleted);
       }
     } catch (error) {
       logger.error(`watched-files handler failed: ${String(error)}`);
@@ -284,10 +138,17 @@ export function createServer(): Server {
       if (document === null) {
         return [];
       }
-      const names = project?.isScanned() === true ? project.index.basenames() : undefined;
-      return names === undefined
-        ? complete(document.text, document.offsetAt(params.position))
-        : complete(document.text, document.offsetAt(params.position), { templateNames: names });
+      const offset = document.offsetAt(params.position);
+      const current = projects.getProject();
+      if (current === null || !current.isScanned()) {
+        return complete(document.text, offset);
+      }
+      const names = current.index.basenames();
+      const context = current.templateContext(params.textDocument.uri);
+      if (context === null) {
+        return complete(document.text, offset, { templateNames: names });
+      }
+      return complete(document.text, offset, { templateNames: names, contextNames: context.vars, contextTypes: context.types });
     } catch (error) {
       logger.error(`completion handler failed: ${String(error)}`);
       return [];
@@ -300,7 +161,20 @@ export function createServer(): Server {
       if (document === null) {
         return null;
       }
-      return hover(document.text, document.offsetAt(params.position));
+      const offset = document.offsetAt(params.position);
+      const current = projects.getProject();
+      if (current === null || !current.isScanned()) {
+        return hover(document.text, offset);
+      }
+      const context = current.templateContext(params.textDocument.uri);
+      if (context === null) {
+        return hover(document.text, offset);
+      }
+      const sources = new Map<string, readonly string[]>();
+      for (const name of context.vars) {
+        sources.set(name, context.sources);
+      }
+      return hover(document.text, offset, { contextSources: sources, contextTypes: context.types });
     } catch (error) {
       logger.error(`hover handler failed: ${String(error)}`);
       return null;
@@ -314,8 +188,8 @@ export function createServer(): Server {
         return null;
       }
       const found: Location | null = definition(document.text, params.textDocument.uri, document.offsetAt(params.position), {
-        roots,
-        templateDirs,
+        roots: [...projects.getRoots()],
+        templateDirs: [...projects.getTemplateDirs()],
       });
       return found;
     } catch (error) {
@@ -370,7 +244,7 @@ export function createServer(): Server {
 
   connection.onWorkspaceSymbol((params): SymbolInformation[] => {
     try {
-      const current = project;
+      const current = projects.getProject();
       if (current !== null && current.isScanned()) {
         return indexWorkspaceSymbols(current.index, params.query);
       }
@@ -418,8 +292,7 @@ export function createServer(): Server {
   documents.onDidOpen((event): void => {
     try {
       sync.applyTextDocument(event.document);
-      applyFallbackRoot(event.document.uri);
-      project?.upsert(event.document.uri, event.document.getText());
+      projects.opened(event.document.uri, event.document.getText());
       publishDiagnostics(connection, event.document.uri, event.document.version, event.document.getText());
     } catch (error) {
       logger.error(`didOpen handler failed: ${String(error)}`);
@@ -429,7 +302,7 @@ export function createServer(): Server {
   documents.onDidChangeContent((event): void => {
     try {
       sync.didChange(event.document.uri, event.document.getText(), event.document.version);
-      project?.upsert(event.document.uri, event.document.getText());
+      projects.changed(event.document.uri, event.document.getText());
       publishDiagnostics(connection, event.document.uri, event.document.version, event.document.getText());
     } catch (error) {
       logger.error(`didChange handler failed: ${String(error)}`);
@@ -440,12 +313,7 @@ export function createServer(): Server {
     try {
       sync.didClose(event.document.uri);
       connection.sendDiagnostics({ uri: event.document.uri, diagnostics: [] });
-      const current = project;
-      if (current !== null) {
-        void current.revertToDisk(event.document.uri).catch((error: unknown) => {
-          logger.error(`disk revert failed: ${String(error)}`);
-        });
-      }
+      projects.closed(event.document.uri);
     } catch (error) {
       logger.error(`didClose handler failed: ${String(error)}`);
     }

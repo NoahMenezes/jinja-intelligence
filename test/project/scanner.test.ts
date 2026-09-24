@@ -36,7 +36,7 @@ function fakeFs(tree: Node): ScanFs {
   };
 }
 
-const OPTS = { extensions: [".j2", ".jinja"], skipDirs: ["node_modules", ".git"], maxFiles: 100 };
+const OPTS = { extensions: [".j2", ".jinja"], pythonExtensions: [".py"], skipDirs: ["node_modules", ".git"], maxFiles: 100 };
 
 describe("scanner", () => {
   it("collects nested templates and skips decoys", async () => {
@@ -68,5 +68,27 @@ describe("scanner", () => {
     const result = await walkRoots(["/proj", "/missing"], OPTS, fs);
     expect(result.files).toEqual(["/proj/ok.j2"]);
     expect(result.skipped).toContain("/missing");
+  });
+
+  it("terminates on symlink cycles via canonical paths", async () => {
+    const fs = fakeFs({ proj: { "a.j2": "x" } });
+    const cycling: ScanFs = {
+      ...fs,
+      realpath: async (path: string) => (path === "/proj/loop" ? "/proj" : path),
+      stat: async (path: string) => {
+        if (path === "/proj/loop") {
+          return { isDirectory: () => true, isFile: () => false };
+        }
+        return fs.stat(path);
+      },
+      readdir: async (path: string) => {
+        if (path === "/proj/loop") {
+          return ["a.j2", "loop"];
+        }
+        return fs.readdir(path);
+      },
+    };
+    const result = await walkRoots(["/proj"], OPTS, cycling);
+    expect(result.files).toEqual(["/proj/a.j2"]);
   });
 });

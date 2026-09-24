@@ -1,6 +1,6 @@
 {
   "name": "jinja-intelligence",
-  "version": "0.10.0",
+  "version": "0.12.0",
   "description": "Python-aware, project-aware Language Server for Jinja templates",
   "type": "module",
   "license": "MIT",
@@ -16,6 +16,7 @@
     "build": "tsc -p tsconfig.build.json",
     "test": "vitest run",
     "test:watch": "vitest",
+    "bench": "bun scripts/bench.ts",
     "start": "node dist/server.js --stdio"
   },
   "dependencies": {
