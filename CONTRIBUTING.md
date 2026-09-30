@@ -24,6 +24,17 @@ bun run test test/hover/        # one area only
 bun run bench                   # performance numbers (see docs/performance.md)
 ```
 
+## F5 debugging (VS Code extension)
+
+1. From the repo root: `bun run build` (builds `dist/server.js`).
+2. Open folder `editors/vscode-extension` in VS Code.
+3. Press `F5` (`Run Extension`). The `preLaunchTask` rebuilds the server
+   and runs `npm run compile` (`tsc` + copy bundled `dist/server.js`)
+   automatically.
+4. In the Extension Host window, open any `.j2` / `.jinja` / `.jinja2`
+   file to exercise diagnostics, completion, hover, go-to-definition,
+   rename, symbols, and signature help.
+
 ## Before you code
 
 - **Bugs:** use the bug-report template — minimal template, expected vs
