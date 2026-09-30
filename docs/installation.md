@@ -1,19 +1,60 @@
 # Installation
 
-## npm (language server)
+## Language server (one `npm publish` covers all managers)
+
+All managers below pull the same `jinja-intelligence` package from the npm
+registry. Requires Node.js 18+. Verify with `jinja-intelligence --version`.
 
 ```sh
+# npm
 npm install -g jinja-intelligence
 jinja-intelligence --stdio
+# without installing:
+npx jinja-intelligence --stdio
+
+# bun
+bun add -g jinja-intelligence
+jinja-intelligence --stdio
+# without installing:
+bunx jinja-intelligence --stdio
+
+# pnpm
+pnpm add -g jinja-intelligence
+jinja-intelligence --stdio
+# without installing:
+pnpm dlx jinja-intelligence --stdio
+
+# yarn classic (v1)
+yarn global add jinja-intelligence
+jinja-intelligence --stdio
+# yarn berry (v3/v4, no global install needed)
+yarn dlx jinja-intelligence --stdio
 ```
 
-Or without installing:
+### curl (no package manager)
 
 ```sh
-npx jinja-intelligence --stdio
+curl -fsSL https://raw.githubusercontent.com/NoahMenezes/jinja-intelligence/main/scripts/install.sh | sh
+# pin a version / custom prefix:
+# curl -fsSL .../install.sh | sh -s -- 1.0.0
+# PREFIX=$HOME/.local sh install.sh
+# PREFIX=/usr/local sudo sh install.sh
 ```
 
-Requires Node.js 18+. Verify with `jinja-intelligence --version`.
+Installs to `$PREFIX/share/jinja-intelligence` with a
+`$PREFIX/bin/jinja-intelligence` shim (uses the bundled `npm install
+--omit=dev` once for runtime deps). Ensure `$PREFIX/bin` is on `PATH`,
+then `jinja-intelligence --version`.
+
+### Finding the binary path (for Neovim / Zed / Helix below)
+
+```sh
+command -v jinja-intelligence  # global install
+npm root -g                    # npm global dir (dist lives under it)
+pnpm root -g
+bun pm bin -g
+yarn global bin                # yarn classic
+```
 
 ## VS Code
 

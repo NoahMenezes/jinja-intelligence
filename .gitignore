@@ -5,3 +5,5 @@ out/
 *.log
 *.vsix
 .DS_Store
+
+*.tgz
