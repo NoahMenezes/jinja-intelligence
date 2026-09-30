@@ -1,7 +1,7 @@
 # Configuration
 
-> Phase 7: settings are accepted (initialization options + workspace
-> configuration) and stored, but no feature reads them yet.
+Settings arrive via LSP initialization options + workspace configuration and
+are merged over defaults by `resolveSettings` (`src/config/settings.ts`).
 
 ## Defaults
 

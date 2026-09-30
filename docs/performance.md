@@ -1,10 +1,11 @@
 # Performance
 
-Measured with `bun scripts/bench.ts` (best-of-N, dev hardware, Phase 19).
+Measured with `bun scripts/bench.ts` (best-of-N, dev hardware).
+Reproduce: `bun run bench` (fixture: 1923 lines / ~80KB pathological template).
 Budgets: cold startup < 500ms, keystroke features < 16ms on realistic files,
 full scan < 5s for 2000 files, index < 50MiB for 2000 files.
 
-## Latest run (0.12.0 + hardening)
+## Latest run (1.0.0)
 
 | operation | best of N | note |
 | --- | --- | --- |
