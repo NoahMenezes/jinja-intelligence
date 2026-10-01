@@ -4,7 +4,7 @@
   "displayName": "Jinja Intelligence",
   "description": "Python-aware, project-aware language intelligence for Jinja templates",
   "license": "MIT",
-  "publisher": "jinja-intelligence",
+  "publisher": "NoahMenezes",
   "repository": {
     "type": "git",
     "url": "https://github.com/NoahMenezes/jinja-intelligence.git",
